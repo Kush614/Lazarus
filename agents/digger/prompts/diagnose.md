@@ -1,0 +1,2 @@
+A hunter found an input where a port disagrees with the original binary. You get the divergence and the related claims.
+Return the root cause, one new testable claim about the original's behavior, and an edit to the digging strategy: a general probing rule that would have found this class of behavior, not a rule about this one input. The diff must be a unified diff against the strategy text. Do not name specific values from this divergence in the strategy rule.

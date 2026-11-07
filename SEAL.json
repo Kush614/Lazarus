@@ -1,0 +1,9 @@
+{
+  "source_hash": "148eaaad7fdf3cdffa67275362b3b630e1b17daee6aa637b271c750b5abf98f9",
+  "heldout_hash": "35d544ddda162806b5d42c45b63b8d68d074de93a94ac624e062d005c13ca511",
+  "tx_hash": "7A3C8BE99C0A78365C4F6A13EC769EFFA7FE5844535C1D1A274F794742E6A9D8",
+  "memo": "LAZARUS-SEAL src:148eaaad7fdf3cdffa67275362b3b630e1b17daee6aa637b271c750b5abf98f9 ho:35d544ddda162806b5d42c45b63b8d68d074de93a94ac624e062d005c13ca511",
+  "network": "fetchai-stable-testnet (dorado-1)",
+  "wallet": "fetch1h35fm8faj9790adzt7cfdkks67yezcwqrta067",
+  "timestamp": "2026-11-07T06:22:49.645308+00:00"
+}
