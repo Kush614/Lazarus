@@ -74,6 +74,36 @@ def business(db, bid: str):
     return cards.detail(b["spec"]["name"], rows=rows, ctas=ctas, narration=b["spec"]["pitch"])
 
 
+def quiz_items(c: str) -> list[tuple[str, list[str], str]]:
+    """(question, options, correct answer) from a delivered quiz page: a JS data array, or form fieldsets plus an answer map."""
+    import html as _html
+    S = r"""([`'"])((?:\\.|(?!\1).)*?)\1"""
+    txt = lambda x: re.sub(r"\s+", " ", _html.unescape(re.sub(r"<[^>]+>", " ", x))).strip()
+    out = []
+    # 1. JS array: {q:`...`, opts:[`a`,`b`], a:1}
+    for m in re.finditer(r"(?:q|question|text|prompt)['\"]?\s*:\s*" + S + r"\s*,\s*(?:opts|options|choices|answers|o)['\"]?\s*:\s*\[(.*?)\]\s*,\s*(?:a|answer|correct|correctIndex)['\"]?\s*:\s*(\d+|" + S + ")", c, re.S):
+        opts = [o[1] for o in re.findall(S, m.group(3), re.S)]
+        a = m.group(4)
+        ans = opts[int(a)] if a.isdigit() and int(a) < len(opts) else (m.group(6) or "")
+        out.append((m.group(2).strip(), opts, ans))
+    if out:
+        return out
+    # 2. Form: <legend>question</legend> ... <label>option</label>, answers in a {q1:'B'} map
+    key = dict(re.findall(r"q(\d+)\s*:\s*['\"]([A-Z])['\"]", c))
+    for n, block in enumerate(re.split(r"(?i)<legend[^>]*>", c)[1:], 1):
+        q, _, rest = block.partition("</legend>")
+        q = re.sub(r"^\d+\s*", "", txt(q))
+        opts = [txt(o) for o in re.findall(r"(?is)<label[^>]*>(.*?)</label>", rest.split("<legend")[0].split("</fieldset>")[0])]
+        letter = key.get(str(n), "")
+        ans = next((o for o in opts if o.startswith(letter + ")")), letter) if letter else ""
+        if q:
+            out.append((q, opts, ans))
+    if out:
+        return out
+    # 3. Anything that reads as a question
+    return [(txt(x), [], "") for x in re.findall(r"(?is)<(?:h[2-4]|legend|p|div|label)[^>]*>((?:(?!</?(?:div|p|h\d|legend)).){12,300}?\?)\s*<", c)]
+
+
 def inline(d: dict) -> tuple[dict, str | None]:
     """The delivered product itself, shown inside the card: rows of real content and, for a logo, the image."""
     import base64
@@ -96,11 +126,10 @@ def inline(d: dict) -> tuple[dict, str | None]:
         out["Rows in file"] = f"{len(rows) - 1} ({', '.join(head[:4])})"
         return out, None
     if fmt == "html":
-        qs = re.findall(r'(?:question|q|text|prompt)["\']?\s*:\s*["\']([^"\']{12,220}\?)["\']', c)
-        if not qs:
-            qs = [_html.unescape(re.sub(r"<[^>]+>", "", x)).strip() for x in re.findall(r"(?is)<(?:h[2-4]|legend|p|div)[^>]*>([^<]{12,220}\?)<", c)]
-        if len(qs) >= 3:
-            return {f"Q{n}": q[:200] for n, q in enumerate(qs[:12], 1)} | ({"More": f"{len(qs) - 12} more questions in the file"} if len(qs) > 12 else {}), None
+        quiz = quiz_items(c)
+        if len(quiz) >= 3:
+            return {f"{n}. {q}": "  ·  ".join(opts) + (f"   ✓ {ans}" if ans else "")
+                    for n, (q, opts, ans) in enumerate(quiz, 1)}, None
         text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", c)
         text = re.sub(r"(?i)<br\s*/?>|</(p|h[1-6]|li|div|label|button)>", "\n", text)
         lines = [_html.unescape(re.sub(r"<[^>]+>", " ", x)).strip() for x in text.split("\n")]
