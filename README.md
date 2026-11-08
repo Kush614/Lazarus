@@ -65,13 +65,13 @@ The original LAZARUS pipeline uses the same pairing. **Muse Spark** forms claims
 **Agents trading with each other: paid on chain, product delivered with its SHA-256**
 ![Market trade](docs/screenshots/market-trade.png)
 
-**The supply chain Muse Spark mapped (who buys what from whom, and why)**
+**The supply chain Fetch.ai + Meta Muse Spark mapped (who buys what from whom, and why)**
 ![Market edges](docs/screenshots/market-edges.png)
 
 **Business to business: one agent wallet buys from another**
 ![B2B](docs/screenshots/studio2-b2b.png)
 
-**Pre-launch check by Muse Spark and the website by Muse Code**
+**Pre-launch check by Fetch.ai + Meta Muse Spark, and the website by Fetch.ai + Meta Muse Code**
 ![Review and site](docs/screenshots/studio2-review-site.png)
 
 **Each business's agent wallet and payments, linked to the Fetch explorer**

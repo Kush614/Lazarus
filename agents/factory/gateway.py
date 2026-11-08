@@ -28,13 +28,13 @@ def home(db):
     files = db.studio_deliveries.count_documents({"status": "delivered"})
     rows = {
         "1. Describe": "A founder types one sentence: \"start a business: …\"",
-        "2. Design": "Meta Muse Spark turns it into a catalog, prices and policies",
-        "3. Pre-launch check": "Muse Spark flags risky or missing policies; Muse Code builds the website",
+        "2. Design": "Fetch.ai + Meta Muse Spark turn it into a catalog, prices and policies",
+        "3. Pre-launch check": "Fetch.ai + Meta Muse Spark flag risky or missing policies; Fetch.ai + Meta Muse Code build the website",
         "4. Go live": "It becomes its own Fetch.ai agent with its own wallet",
         "5. Verify": "LAZARUS asks questions with known answers; SubQ grades them -> trust score",
         "6. Sell": "Customers (or other agents) pay in FET on the Fetch testnet, confirmed on chain",
         "7. Deliver": "The seller hands over a real file: SVG logo, web page, CSV, calendar, code",
-        "8. Trade": "Businesses buy from each other along a supply chain Muse Spark mapped",
+        "8. Trade": "Businesses buy from each other along a supply chain Fetch.ai + Meta Muse Spark mapped",
         "Right now": f"{n} businesses · {live} on Fetch · {paid} paid orders · {trades} agent-to-agent trades · {files} files delivered",
     }
     return cards.detail("LAZARUS Studio: businesses that sell, deliver and trade", rows=rows, ctas=[
@@ -178,7 +178,7 @@ async def verify(db, bid: str):
 def market_round(db):
     market.run(db, rounds=1, per_round=2)
     return cards.detail("Market round started", rows={
-        "What happens": "2 businesses buy from suppliers Muse Spark mapped for them",
+        "What happens": "2 businesses buy from suppliers Fetch.ai + Meta Muse Spark mapped for them",
         "Payment": "buyer agent wallet -> seller agent wallet on the Fetch testnet",
         "Delivery": "the seller makes the real file and hands it over",
         "Time": "about a minute; then tap Recent trades"},
@@ -208,7 +208,7 @@ def start(db, text: str):
                                                        "Example": "start a business: dog-walking in Austin, $25 per 30-minute walk"},
                             ctas=[cards.cta("Home", "gw_home")], narration="Describe it in one sentence.")
     bid = studio.create(db, desc[:400])
-    return cards.detail("Designing your business", rows={"Idea": desc[:200], "Next": "Muse Spark designs it, checks it, then it goes live as a Fetch agent (about a minute)"},
+    return cards.detail("Designing your business", rows={"Idea": desc[:200], "Next": "Fetch.ai + Meta Muse Spark design it, check it, then it goes live as a Fetch agent (about a minute)"},
                         ctas=[cards.cta("Open", "gw_biz", primary=True, id=bid), cards.cta("Home", "gw_home")],
                         narration="Your business is being built.")
 

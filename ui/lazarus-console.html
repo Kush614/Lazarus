@@ -1501,7 +1501,7 @@ function studioUnavailable() {
   $("#sAct").hidden = true; $("#sMkt").hidden = true; $("#studioMain").classList.add("sdown");
   const w = h("div", "dwrap"), c = h("section", "card");
   w.append(h("div", "eyebrow", "Studio"), h("h1", null, "Start any business by chatting"),
-    h("p", "lead", "Describe a business in one sentence. Meta Muse Spark designs and reviews it, Muse Code builds its website, it goes live as a real Fetch.ai agent, customers chat with it, and LAZARUS checks that the agent tells the truth about its own prices and policies."));
+    h("p", "lead", "Describe a business in one sentence. Fetch.ai and Meta Muse Spark design and review it, Muse Code builds its website, it goes live as a real Fetch.ai agent, customers chat with it, and LAZARUS checks that the agent tells the truth about its own prices and policies."));
   c.append(h("h3", null, "Studio needs the LAZARUS API"), h("p", "sub", "The Studio endpoints at " + BASE + " are not answering" + (S.lastErr ? " (" + S.lastErr + ")" : "") + ". Nothing is shown here until they do; there is no sample data on this tab."), h("p", "sub", "This page retries every 10 seconds and switches on by itself."));
   w.append(c); right.append(w); left.style.display = "none";
 }
@@ -1547,7 +1547,7 @@ function renderStudioLeft() {
   f.append(lab, ta, row, msg);
   f.addEventListener("submit", async e => { e.preventDefault(); const p = ta.value.trim(); if (!p) { ta.focus(); return; }
     go.disabled = true; go.textContent = "Creating…"; msg.textContent = "";
-    try { const r = await post("/studio/businesses", { prompt:p }, 30000); ta.value = ""; if (r && r.business_id) { S.sel = r.business_id; S.detail = null; } msg.textContent = "Meta Muse Spark is designing it. It appears below and goes live in about a minute."; studioStop(); await studioLoad(false); }
+    try { const r = await post("/studio/businesses", { prompt:p }, 30000); ta.value = ""; if (r && r.business_id) { S.sel = r.business_id; S.detail = null; } msg.textContent = "Fetch.ai and Meta Muse Spark are designing it. It appears below and goes live in about a minute."; studioStop(); await studioLoad(false); }
     catch (err) { msg.textContent = "Could not create it: " + str(err.message); }
     finally { go.disabled = false; go.textContent = "Create"; } });
   seed.addEventListener("click", async () => { seed.disabled = true; seed.textContent = "Launching…"; msg.textContent = "";
@@ -1579,7 +1579,7 @@ function renderStudioList() {
     ul.append(c);
   });
 }
-function renderEmptyDetail() { const r = $("#sRight"); r.replaceChildren(); const w = h("div", "dwrap"); w.append(h("div", "eyebrow", "Studio"), h("h1", null, "Start any business by chatting"), h("p", "lead", "Describe a business on the left. Meta Muse Spark designs its catalog and policies, Muse Code builds its website, it goes live as a real Fetch.ai agent, and LAZARUS verifies it tells customers the truth.")); r.append(w); }
+function renderEmptyDetail() { const r = $("#sRight"); r.replaceChildren(); const w = h("div", "dwrap"); w.append(h("div", "eyebrow", "Studio"), h("h1", null, "Start any business by chatting"), h("p", "lead", "Describe a business on the left. Fetch.ai and Meta Muse Spark design its catalog and policies, Muse Code builds its website, it goes live as a real Fetch.ai agent, and LAZARUS verifies it tells customers the truth.")); r.append(w); }
 async function loadDetail(id, full) {
   let d; try { d = await api("/studio/businesses/" + encodeURIComponent(id), {}, 10000); } catch (e) { if (S.sel === id) { const r = $("#sRight"); r.replaceChildren(h("div", "errbox", "Could not load this business: " + str(e.message))); } return; }
   if (S.sel !== id) return;
@@ -1595,7 +1595,7 @@ function renderDetail(d) {
   const bar = h("div", "chips"); bar.append(statusPill(d.status)); if (d.digital) bar.append(h("span", "tag acc", "DIGITAL")); if (d.handle) bar.append(monoEl("@" + str(d.handle).replace(/^@/, "")));
   const l = d.status === "live" ? sLink(d.profile_url, "Open on Agentverse ↗") : null; if (d.status === "registered" && d.address) { const al = sLink("https://agentverse.ai/agents/details/" + encodeURIComponent(d.address) + "/profile", "Look up on Agentverse ↗"); if (al) bar.append(al); } if (l) { l.style.fontWeight = "600"; bar.append(l); }
   w.append(bar);
-  if (inProgress(d)) w.append(waitingBox(/design/i.test(d.status) ? "Meta Muse Spark is designing the business" : /review/i.test(d.status) ? "Fetch.ai and Meta Muse Spark are reviewing it before launch" : "Starting the Fetch.ai agent", "This page checks every 3 seconds. The catalog, policies and chat appear as soon as they exist."));
+  if (inProgress(d)) w.append(waitingBox(/design/i.test(d.status) ? "Fetch.ai and Meta Muse Spark are designing the business" : /review/i.test(d.status) ? "Fetch.ai and Meta Muse Spark are reviewing it before launch" : "Starting the Fetch.ai agent", "This page checks every 3 seconds. The catalog, policies and chat appear as soon as they exist."));
   if (d.status === "registered" && d.error) w.append(h("p", "dnote", str(d.error)));
   else if (d.status === "failed" || d.error) { const e = h("div", "errbox"); e.append(h("b", null, "This business failed: "), document.createTextNode(str(d.error || "no error message returned"))); w.append(e); }
   const spec = d.spec || {};
@@ -1636,17 +1636,17 @@ function renderExtras(d) {
   // review
   const rv = $("#sReview"); if (rv) { rv.replaceChildren(); const R = d.review;
     if (R) { const iss = Array.isArray(R.issues) ? R.issues : [];
-      const c = card("Pre-launch check by Muse Spark", R.ready ? "Ready to launch. " + (iss.length ? iss.length + " suggestion(s) below." : "No issues found.") : "Not ready to launch until the issues below are fixed.", h("span", "tag " + (R.ready ? "ok" : "bad"), R.ready ? "READY" : "NOT READY"), true);
+      const c = card("Pre-launch check by Fetch.ai + Meta Muse Spark", R.ready ? "Ready to launch. " + (iss.length ? iss.length + " suggestion(s) below." : "No issues found.") : "Not ready to launch until the issues below are fixed.", h("span", "tag " + (R.ready ? "ok" : "bad"), R.ready ? "READY" : "NOT READY"), true);
       if (iss.length) { const sw = h("div", "scroll-x"), t = h("table", "vtable"), hr = h("tr"); ["Severity", "Field", "Problem", "Fix"].forEach(x => hr.append(h("th", null, x))); t.append(hr);
         iss.forEach(x => { const tr = h("tr"), sv = str(x.severity).toLowerCase(), td = h("td"); td.append(h("span", "tag " + (/high|critical|block/.test(sv) ? "bad" : /med/.test(sv) ? "warn" : ""), sv.toUpperCase() || "–"));
           const fd = h("td"); fd.append(monoEl(show(x.field))); tr.append(td, fd, h("td", null, show(x.problem)), h("td", null, show(x.fix))); t.append(tr); });
         sw.append(t); c.append(sw); }
       rv.append(c); }
-    else if (/review/i.test(d.status)) rv.append(waitingBox("Muse Spark is checking it before launch", "Looking for missing prices, vague policies and promises the catalog can't keep.")); }
+    else if (/review/i.test(d.status)) rv.append(waitingBox("Fetch.ai and Meta Muse Spark are checking it before launch", "Looking for missing prices, vague policies and promises the catalog can't keep.")); }
   // website
   const st = $("#sSite"); if (st) { st.replaceChildren(); const W = d.site;
-    if (W) { const c = card("Website by Muse Code", "A one-page site generated from the same catalog and policies the agent uses.", h("span", "tag " + (/ready/i.test(W.status) ? "ok" : /fail/i.test(W.status) ? "bad" : "warn"), str(W.status || "–").toUpperCase()), true);
-      if (/building/i.test(W.status)) c.append(waitingBox("Muse Code is building the website…", "This card updates by itself when it is ready."));
+    if (W) { const c = card("Website by Fetch.ai + Meta Muse Code", "A one-page site generated from the same catalog and policies the agent uses.", h("span", "tag " + (/ready/i.test(W.status) ? "ok" : /fail/i.test(W.status) ? "bad" : "warn"), str(W.status || "–").toUpperCase()), true);
+      if (/building/i.test(W.status)) c.append(waitingBox("Fetch.ai and Meta Muse Code are building the website…", "This card updates by itself when it is ready."));
       else if (/fail/i.test(W.status)) c.append(h("div", "errbox", "The website build failed" + (W.error ? ": " + str(W.error) : ".")));
       else { const row = h("div", "vrow"); const info = h("div", "sub"); info.style.margin = "0";
         info.append((W.bytes != null ? (+W.bytes).toLocaleString() + " bytes" : "") + (W.check ? (W.bytes != null ? " · " : "") + "check: " + str(W.check) : ""));
@@ -1689,7 +1689,7 @@ function buyCard(d) {
 }
 function renderVerify(v) {
   const slot = $("#sVerSlot"); if (!slot) return; slot.replaceChildren();
-  if (S.verifying[S.sel]) { slot.append(waitingBox("Asking the agent its test questions", "This takes 10–30 seconds. Meta Muse Spark answers; LAZARUS checks.")); return; }
+  if (S.verifying[S.sel]) { slot.append(waitingBox("Asking the agent its test questions", "This takes 10–30 seconds. Fetch.ai agent + Meta Muse Spark answer; LAZARUS checks.")); return; }
   if (!v) return;
   const rows = Array.isArray(v.rows) ? v.rows : [], passed = v.passed ?? rows.filter(x => x.pass).length, total = v.total ?? rows.length;
   const allOk = total > 0 && passed === total;
@@ -1764,7 +1764,7 @@ function setPane(k) {
 }
 function renderMarket() {
   const r = $("#sRight"); r.replaceChildren(); r.scrollTop = 0; const w = h("div", "dwrap");
-  w.append(h("div", "eyebrow", "Studio · Market"), h("h1", null, "Agents buying from agents"), h("p", "lead", "Every business here is its own Fetch.ai agent with its own wallet. Meta Muse Spark maps who would buy what from whom; each trade is paid wallet-to-wallet on the Fetch testnet and the digital product is delivered as a file with a SHA-256 fingerprint."));
+  w.append(h("div", "eyebrow", "Studio · Market"), h("h1", null, "Agents buying from agents"), h("p", "lead", "Every business here is its own Fetch.ai agent with its own wallet. Fetch.ai and Meta Muse Spark map who would buy what from whom; each trade is paid wallet-to-wallet on the Fetch testnet and the digital product is delivered as a file with a SHA-256 fingerprint."));
   const ctl = h("section", "card"); ctl.append(h("h3", null, "Market rounds"));
   const row = h("div", "vrow"); const st = h("p", "sub"); st.id = "mkStatus"; st.textContent = "Checking market status…";
   const run = h("button", "btn primary", "Run market round"); run.type = "button"; run.id = "mkRun";
@@ -1773,7 +1773,7 @@ function renderMarket() {
     pollMarket(); });
   row.append(st, run); ctl.append(row); w.append(ctl);
   const tr = card("Live trades", "Newest first. Each one is a real payment on the Fetch testnet plus a delivered file.", null, true); const tl = h("div", "list"); tl.id = "mkTrades"; tl.append(h("div", "dnote", "Loading trades…")); tr.append(tl); w.append(tr);
-  const ed = card("Who buys from whom (mapped by Muse Spark)", "Each row is a plausible purchase between two businesses on the network.", null, true); const es = h("div", "scroll-x"); es.id = "mkEdges"; es.append(h("div", "dnote", "Loading the map…")); ed.append(es); w.append(ed);
+  const ed = card("Who buys from whom (mapped by Fetch.ai + Meta Muse Spark)", "Each row is a plausible purchase between two businesses on the network.", null, true); const es = h("div", "scroll-x"); es.id = "mkEdges"; es.append(h("div", "dnote", "Loading the map…")); ed.append(es); w.append(ed);
   r.append(w); pollMarket(); loadEdges();
 }
 async function loadEdges() {
