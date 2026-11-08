@@ -20,6 +20,7 @@ def test_unknown_item_is_referred_to_a_studio_business_that_sells_it():
 def test_price_check_rejects_a_wrong_number():
     assert studio._price_ok(23.0, "It is $23.00 each.")
     assert not studio._price_ok(23.0, "It is $25 each.")
+    assert not studio._price_ok(6.0, "Garlic Knots are $6.0 million each.")
 
 
 def test_order_is_not_paid_when_the_chain_did_not_confirm(monkeypatch):

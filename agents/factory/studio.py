@@ -218,6 +218,8 @@ def answer(spec: dict, message: str, others: list[dict] | None = None) -> dict:
 
 
 def _price_ok(expected: float, got: str) -> bool:
+    if re.search(r"\d\s*(million|billion|thousand|bn)\b", got, re.I):  # "$6.0 million" is not $6.00
+        return False
     nums = [float(n.replace(",", "")) for n in re.findall(r"\d[\d,]*(?:\.\d+)?", got)]
     return any(abs(n - expected) < 0.01 for n in nums)
 

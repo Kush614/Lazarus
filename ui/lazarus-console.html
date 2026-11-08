@@ -1,0 +1,1898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LAZARUS Proof Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0D10;--panel:#12161B;--panel2:#171C22;--border:#232A33;--border2:#2E3742;
+  --text:#F2F4F7;--text-2:#A9B4C2;--accent:#5B8CFF;--ok:#3DDC97;--warn:#F5C451;--bad:#FF6B6B;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --r:10px;--shadow:0 1px 0 rgba(255,255,255,.03) inset,0 8px 24px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:400 16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+button:disabled{cursor:not-allowed}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.mono{font-family:var(--mono);font-size:14px}
+
+/* header */
+.hdr{border-bottom:1px solid var(--border);background:var(--bg)}
+.top{display:flex;align-items:center;gap:20px;padding:14px 24px 6px;flex-wrap:wrap}
+.navrow{display:flex;align-items:center;gap:4px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+.navtab{height:44px;padding:0 12px;font-size:15px;font-weight:500;color:var(--text-2);border-bottom:2px solid transparent;white-space:nowrap}
+.navtab:hover{color:var(--text)}
+.navtab[aria-current="page"]{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.navsep{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2);padding:0 6px 0 18px;margin-left:8px;border-left:1px solid var(--border2);white-space:nowrap}
+.brand{font-weight:600;font-size:18px;letter-spacing:.14em}
+.pitch{color:var(--text-2);font-size:15px;flex:1;min-width:220px}
+.activity{color:var(--text-2);font-size:13px;display:flex;align-items:center;gap:8px;max-width:340px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.activity[hidden]{display:none}
+.activity .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.pill{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:600;letter-spacing:.06em;border:1px solid var(--border2);white-space:nowrap}
+.pill.live{color:var(--ok);border-color:rgba(61,220,151,.45);background:rgba(61,220,151,.08)}
+.pill.off{color:var(--warn);border-color:rgba(245,196,81,.45);background:rgba(245,196,81,.08)}
+.pill i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.hbtn{height:34px;padding:0 14px;border-radius:8px;border:1px solid var(--border2);color:var(--text);font-size:14px;font-weight:500;background:var(--panel)}
+.hbtn:hover{border-color:var(--text-2)}
+
+/* layout */
+.app{flex:1;min-height:0;display:grid;grid-template-columns:268px minmax(0,1fr) 400px;transition:grid-template-columns .3s ease}
+.app.chat-closed{grid-template-columns:268px minmax(0,1fr) 0}
+.app.chat-closed .chat{visibility:hidden}
+
+/* stepper */
+.stepper{border-right:1px solid var(--border);padding:24px 16px;overflow:auto}
+.stepper h2{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-2);padding:0 10px 12px}
+.steps{list-style:none;display:flex;flex-direction:column;gap:4px;position:relative}
+.sbtn{display:grid;grid-template-columns:30px minmax(0,1fr);gap:4px 12px;align-items:center;width:100%;text-align:left;padding:10px;border-radius:var(--r);border:1px solid transparent;transition:background .2s,border-color .2s}
+.sbtn:hover{background:var(--panel)}
+.sbtn[aria-current="step"]{background:var(--panel);border-color:rgba(91,140,255,.55);box-shadow:inset 3px 0 var(--accent)}
+.sbtn .num{grid-row:span 2;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:600;border:1px solid var(--border2);color:var(--text)}
+.sbtn[aria-current="step"] .num{background:var(--accent);border-color:var(--accent);color:#0B0D10}
+.sbtn .st{font-size:15px;font-weight:600;color:var(--text)}
+.sbtn .ss{font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px;color:var(--text-2)}
+.ss i{width:8px;height:8px;border-radius:50%;background:var(--text-2);flex:none}
+.ss.s-done{color:var(--ok)}.ss.s-done i{background:var(--ok)}
+.ss.s-waiting{color:var(--warn)}.ss.s-waiting i{background:var(--warn)}
+.ss.s-blocked{color:var(--bad)}.ss.s-blocked i{background:var(--bad)}
+.walk{margin:20px 10px 0;width:calc(100% - 20px)}
+
+/* main */
+.main{overflow:auto;padding:32px 40px 40px;min-width:0}
+.panel{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.panel.enter{animation:enter .35s ease both}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.eyebrow{font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+.panel h1{font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-.015em;margin-top:6px}
+.lead{font-size:18px;color:var(--text);max-width:68ch}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow);min-width:0}
+.card h3{font-size:16px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card .sub{color:var(--text-2);font-size:14px;margin-bottom:14px}
+.tag{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:600;letter-spacing:.04em;border:1px solid var(--border2);color:var(--text-2);white-space:nowrap}
+.tag.ok{color:var(--ok);border-color:rgba(61,220,151,.45)}
+.tag.warn{color:var(--warn);border-color:rgba(245,196,81,.45)}
+.tag.bad{color:var(--bad);border-color:rgba(255,107,107,.5)}
+.tag.acc{color:var(--accent);border-color:rgba(91,140,255,.5)}
+.tag.sample{color:var(--warn);border-color:rgba(245,196,81,.45);text-transform:uppercase}
+
+/* flow diagram */
+.flow{display:flex;align-items:stretch;flex-wrap:wrap;gap:8px 0}
+.node{flex:1 1 0;min-width:112px;background:var(--panel2);border:1px solid var(--border2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:3px;justify-content:center}
+.node b{font-size:14px;font-weight:600}
+.node span{font-size:12px;color:var(--text-2);line-height:1.4}
+.node.k-agent{border-color:rgba(91,140,255,.55)}
+.node.k-ok{border-color:rgba(61,220,151,.55)}.node.k-ok b{color:var(--ok)}
+.node.k-bad{border-color:rgba(255,107,107,.55)}.node.k-bad b{color:var(--bad)}
+.node.k-chain{border-color:rgba(245,196,81,.5)}
+.arr{flex:0 0 34px;display:grid;place-items:center;color:var(--text-2)}
+.arr svg{width:26px;height:14px}
+.arr path{stroke:currentColor;stroke-width:1.6;fill:none;stroke-dasharray:30;stroke-dashoffset:0}
+.flow.play .node{animation:pop .45s ease both;animation-delay:calc(var(--i) * 220ms)}
+.flow.play .arr path{animation:draw .4s ease both;animation-delay:calc(var(--i) * 220ms + 120ms)}
+@keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes draw{from{stroke-dashoffset:30}to{stroke-dashoffset:0}}
+
+/* data */
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px 18px;font-size:15px}
+.kv dt{color:var(--text-2)}
+.kv dd{min-width:0;overflow-wrap:anywhere}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.metric{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px}
+.metric .v{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2}
+.metric .v small{font-size:14px;color:var(--text-2);font-weight:500;margin-left:4px}
+.metric .l{font-size:13px;color:var(--text-2);margin-top:2px}
+.metric.ok .v{color:var(--ok)}.metric.warn .v{color:var(--warn)}.metric.bad .v{color:var(--bad)}
+.list{display:flex;flex-direction:column}
+.li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;padding:14px 0;border-top:1px solid var(--border)}
+.li:first-child{border-top:0;padding-top:4px}
+.li .t{font-size:15px;overflow-wrap:anywhere}
+.li .t.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.li .m{font-size:13px;color:var(--text-2);grid-column:1/-1;overflow-wrap:anywhere}
+.li .m .mono{font-size:13px}
+.linkbtn{color:var(--accent);font-size:14px;font-weight:500;padding:6px 0}
+.waiting{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px dashed rgba(245,196,81,.45);border-radius:10px;background:rgba(245,196,81,.05)}
+.waiting b{color:var(--warn);font-weight:600}
+.waiting p{color:var(--text-2);font-size:14px;margin-top:2px}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid rgba(245,196,81,.3);border-top-color:var(--warn);animation:spin 1s linear infinite;flex:none;margin-top:3px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:4px;transition:width .6s ease}
+.bar.bad i{background:var(--bad)}
+.vtable{width:100%;border-collapse:collapse;font-size:14px}
+.vtable th{text-align:left;font-size:12px;font-weight:600;color:var(--text-2);letter-spacing:.06em;text-transform:uppercase;padding:0 12px 10px 0;border-bottom:1px solid var(--border)}
+.vtable td{padding:12px 12px 12px 0;border-bottom:1px solid var(--border);vertical-align:top}
+.vtable tr:last-child td{border-bottom:0}
+.scroll-x{overflow-x:auto}
+
+/* verify */
+.verify{border-color:rgba(91,140,255,.4)}
+.vrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.vrow .sub{margin:0;flex:1;min-width:220px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;font-size:15px;font-weight:600;border:1px solid var(--border2);background:var(--panel2);color:var(--text);transition:background .15s,border-color .15s;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--text-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#0B0D10}
+.btn.primary:hover:not(:disabled){background:#7AA2FF}
+.btn:disabled{opacity:1;background:var(--panel2);border-color:var(--border2);color:var(--text-2)}
+.btn .spin{border-color:rgba(11,13,16,.3);border-top-color:#0B0D10;margin:0;width:16px;height:16px}
+.result{margin-top:16px;border:1px solid var(--border2);border-radius:10px;background:var(--bg);padding:16px 18px;animation:enter .3s ease both}
+.result.ok{border-color:rgba(61,220,151,.5)}
+.result.bad{border-color:rgba(255,107,107,.55)}
+.result.warn{border-color:rgba(245,196,81,.5)}
+.rhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.rhead b{font-size:15px}
+.rhead .when{color:var(--text-2);font-size:13px;margin-left:auto}
+.check{display:grid;grid-template-columns:62px minmax(0,1fr);gap:4px 14px;padding:10px 0;border-top:1px solid var(--border);align-items:start}
+.check:first-of-type{border-top:0}
+.check .n{font-weight:600;font-size:15px}
+.check .d{grid-column:2;font-size:14px;color:var(--text-2);overflow-wrap:anywhere}
+.check .tag{grid-row:span 2;justify-content:center}
+.rnote{font-size:14px;color:var(--text-2);margin-top:10px}
+details.raw{margin-top:12px}
+details.raw summary{cursor:pointer;color:var(--accent);font-size:14px;font-weight:500}
+pre.code{margin-top:8px;font:400 13px/1.6 var(--mono);color:var(--text);background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;white-space:pre-wrap;word-break:break-all;max-height:300px;overflow:auto}
+.sbs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pane{border:1px solid var(--border2);border-radius:8px;overflow:hidden;min-width:0;background:var(--panel)}
+.pane .ph{padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text-2);display:flex;justify-content:space-between;gap:8px}
+.pane pre{font:400 13px/1.6 var(--mono);padding:10px 0;white-space:pre-wrap;word-break:break-all;color:var(--text)}
+.pane pre div{padding:0 12px}
+.pane pre .hit{background:rgba(255,107,107,.12);box-shadow:inset 3px 0 var(--bad)}
+.pane p{padding:10px 12px;font-size:14px;overflow-wrap:anywhere}
+.hunt-in{display:flex;flex-direction:column;gap:10px}
+.hunt-in textarea{width:100%;min-height:76px;resize:vertical;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font:400 14px/1.5 var(--mono);color:var(--text)}
+.hunt-in textarea:focus{outline:none;border-color:var(--accent)}
+.presets{display:flex;gap:8px;flex-wrap:wrap}
+.chipbtn{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border2);font-size:13px;color:var(--text);background:var(--panel2);font-family:var(--mono)}
+.chipbtn:hover{border-color:var(--accent)}
+
+.stepnav{display:flex;justify-content:space-between;gap:12px;padding-top:8px}
+.stepnav .hint{color:var(--text-2);font-size:13px;align-self:center;text-align:center}
+
+/* chat */
+.chat{border-left:1px solid var(--border);display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--bg);position:relative;overflow:hidden}
+.chat-h{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.chat-h b{font-size:16px;font-weight:600;flex:1}
+.cbtn{height:30px;padding:0 10px;border-radius:7px;border:1px solid var(--border2);font-size:13px;font-weight:500;color:var(--text)}
+.cbtn:hover{border-color:var(--text-2)}
+.models{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center}
+.models .lab{font-size:12px;color:var(--text-2);margin-right:2px}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;border:1px solid var(--border2);font-size:12px;font-weight:500;color:var(--text-2);white-space:nowrap}
+.chip.on{color:var(--text);border-color:rgba(91,140,255,.6);background:rgba(91,140,255,.12)}
+.chip.ag{color:var(--text-2)}
+.chip.sm{color:var(--warn);border-color:rgba(245,196,81,.45)}
+.msgs{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:16px;min-height:0}
+.msg{display:flex;flex-direction:column;gap:8px;min-width:0}
+.msg .mh{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2);font-weight:500}
+.msg .mh .who{color:var(--text);font-weight:600}
+.msg.user .mh .who{color:var(--accent)}
+.msg .mh .t{margin-left:auto}
+.msg .body{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.user .body{padding:10px 12px;border-radius:10px;background:var(--panel);border:1px solid var(--border)}
+.msg .surf{display:flex;flex-direction:column;gap:8px;min-width:0}
+.receipts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.receipts .lab{font-size:12px;color:var(--text-2)}
+.thinking{font-size:14px;color:var(--text-2)}
+.thinking::after{content:"…";animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.2}}
+.sugg{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px 0}
+.sugg button{height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--border2);font-size:13px;color:var(--text)}
+.sugg button:hover{border-color:var(--accent)}
+.composer{display:flex;gap:8px;padding:12px 16px 16px}
+.composer input[type=text]{flex:1;min-width:0;height:42px;padding:0 12px;border-radius:9px;border:1px solid var(--border2);background:var(--panel);font-size:15px}
+.composer input[type=text]:focus{outline:none;border-color:var(--accent)}
+.composer .btn{height:42px}
+#clip{width:42px;padding:0;font-size:20px;font-weight:500}
+.hist{position:absolute;inset:0;background:var(--bg);z-index:3;display:none;flex-direction:column}
+.chat.show-hist .hist{display:flex}
+.hist-list{overflow:auto;flex:1}
+.sess{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:12px 16px;border-bottom:1px solid var(--border)}
+.sess:hover{background:var(--panel)}
+.sess.cur{box-shadow:inset 3px 0 var(--accent)}
+.sess b{font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sess span{font-size:12px;color:var(--text-2)}
+.empty{padding:16px;color:var(--text-2);font-size:14px}
+.chat.dragging::after{content:"Drop a file to extract claims";position:absolute;inset:8px;border:2px dashed var(--accent);border-radius:12px;display:grid;place-items:center;background:rgba(11,13,16,.9);font-weight:600;z-index:4}
+
+/* A2UI catalog */
+.a-card{border:1px solid var(--border);background:var(--panel);border-radius:10px;padding:14px;min-width:0}
+.a-card.tone-green{border-color:rgba(61,220,151,.45)}.a-card.tone-amber,.a-card.tone-gold{border-color:rgba(245,196,81,.45)}.a-card.tone-red{border-color:rgba(255,107,107,.5)}.a-card.tone-blue{border-color:rgba(91,140,255,.5)}
+.a-card .a-card{background:var(--bg)}
+.tone-green{--tone:var(--ok)}.tone-gold,.tone-amber{--tone:var(--warn)}.tone-blue{--tone:var(--accent)}.tone-red{--tone:var(--bad)}.tone-violet,.tone-coral{--tone:var(--text-2)}
+.a-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.a-row{display:flex;gap:12px;align-items:center;min-width:0;flex-wrap:wrap}
+.a-row.top{align-items:flex-start}.a-row.grid>*{flex:1 1 80px}.a-row.split{justify-content:space-between}.a-row.split>.a-col{flex:1 1 160px}
+.a-text{min-width:0;overflow-wrap:anywhere}
+.v-h1{font-size:20px;font-weight:600}.v-h2{font-size:17px;font-weight:600}.v-h3{font-size:16px;font-weight:600}.v-h4{font-size:15px;font-weight:600}
+.v-body{color:var(--text);font-size:14px}.v-caption{color:var(--text-2);font-size:13px}
+.v-label{font-size:12px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em}
+.v-mono{font:400 13px var(--mono);color:var(--text-2)}
+.a-btn{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--border2);background:var(--panel2);font-size:14px;font-weight:600;color:var(--text)}
+.a-btn .a-text{color:inherit;font:inherit}
+.a-btn.primary{background:var(--accent);color:#0B0D10;border-color:var(--accent)}
+.a-btn.danger{border-color:rgba(255,107,107,.55);color:var(--bad)}
+.a-btn:disabled{background:var(--panel2);color:var(--text-2);border-color:var(--border2)}
+.a-metric{display:flex;flex-direction:column;gap:2px;min-width:0}
+.a-metric .val{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--tone,var(--text))}
+.a-metric .val small{font-size:13px;color:var(--text-2);margin-left:3px}
+.a-metric .ml{font-size:12px;color:var(--text-2)}
+.a-prog{display:flex;flex-direction:column;gap:6px;min-width:0}
+.a-prog .pt{display:flex;justify-content:space-between;font-size:13px;color:var(--text-2)}
+.a-prog .bar{height:6px;margin:0}.a-prog .bar i{width:0;background:var(--tone,var(--accent))}
+.a-badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;border:1px solid var(--tone,var(--border2));font-size:12px;font-weight:600;color:var(--tone,var(--text-2));white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;flex:none}
+.a-div{height:1px;background:var(--border);border:0;width:100%}
+.a-code{display:flex;flex-direction:column;gap:4px;min-width:0}
+.a-code .cl{font-size:12px;font-weight:600;color:var(--text-2)}
+.a-code pre{font:400 13px/1.55 var(--mono);color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto}
+.a-diff{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:0}
+.a-diff .pane .dh{display:flex;justify-content:space-between;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-2)}
+.a-diff .pane .dh b{color:var(--text)}
+.a-diff pre{font:400 12px/1.6 var(--mono);padding:6px 0;white-space:pre-wrap;word-break:break-all;color:var(--text)}
+.a-diff pre div{padding:0 10px}
+.a-diff pre .hit{background:rgba(255,107,107,.12);box-shadow:inset 3px 0 var(--bad)}
+.a-tl{list-style:none;display:flex;flex-direction:column}
+.a-tl li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;padding:8px 0;align-items:start;border-top:1px solid var(--border)}
+.a-tl li:first-child{border-top:0}
+.a-tl .pip{width:8px;height:8px;border-radius:50%;margin-top:7px;background:var(--tone,var(--text-2))}
+.a-tl .tt{font-size:14px;color:var(--text);overflow-wrap:anywhere}
+.a-tl .tm{font-size:12px;color:var(--text-2);overflow-wrap:anywhere}
+.a-tl li.struck .tt{text-decoration:line-through;color:var(--text-2)}
+.a-ring{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none}
+.a-ring .trk{stroke:var(--border)}.a-ring .arc{stroke:var(--tone,var(--ok));transition:stroke-dashoffset 1s ease}
+.a-ring .pct{font:600 16px var(--sans);fill:var(--text)}.a-ring .sub{font:500 9px var(--sans);fill:var(--text-2)}
+.a-ring .rl{font-size:12px;color:var(--text-2)}
+.a-unknown{border:1px dashed rgba(245,196,81,.5);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:4px}
+.a-unknown b{font-size:13px;color:var(--warn)}.a-unknown code{font:400 12px var(--mono);color:var(--text-2);word-break:break-all}
+
+.foot{border-top:1px solid var(--border);padding:14px 24px;color:var(--text-2);font-size:14px;text-align:center}
+.fab{display:none}
+
+/* real-world demos */
+.demo{display:none;overflow:auto;padding:32px 40px 48px;min-width:0}
+.app.demo-mode{grid-template-columns:minmax(0,1fr) 400px}
+.app.demo-mode.chat-closed{grid-template-columns:minmax(0,1fr) 0}
+.app.demo-mode .stepper,.app.demo-mode .main{display:none}
+.app.demo-mode .demo{display:block}
+.dwrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.dwrap h1{font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-.015em;margin-top:6px}
+.who{font-size:15px;color:var(--text-2)}.who b{color:var(--text);font-weight:600}
+.dbar{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:14px 18px;border:1px solid var(--border);border-radius:var(--r);background:var(--panel)}
+.dbar .dmeta{flex:1;min-width:240px;font-size:14px;color:var(--text-2);display:flex;flex-direction:column;gap:4px}
+.dbar .dmeta b{color:var(--text);font-weight:600}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chips .lab{font-size:13px;color:var(--text-2);margin-right:2px}
+.dtl{display:flex;flex-direction:column;gap:16px;position:relative;padding-left:48px}
+.dtl::before{content:"";position:absolute;left:15px;top:20px;bottom:20px;width:2px;background:var(--border2)}
+.dstep{position:relative}
+.dstep.enter{animation:enter .4s ease both}
+.dnum{position:absolute;left:-48px;top:18px;width:32px;height:32px;border-radius:50%;background:var(--bg);border:2px solid var(--border2);display:grid;place-items:center;font-weight:600;font-size:14px;color:var(--text)}
+.dstep.ok .dnum{border-color:var(--ok);color:var(--ok)}
+.dstep.bad .dnum{border-color:var(--bad);color:var(--bad)}
+.dstep.run .dnum{border-color:var(--warn);color:var(--warn)}
+.dhead{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;margin-bottom:12px}
+.dhead h3{font-size:17px;font-weight:600;margin:0;flex:1;min-width:200px}
+.dhead .when{font-size:13px;color:var(--text-2)}
+.dnote{font-size:14px;color:var(--text-2);margin-top:10px}
+.dbody{display:flex;flex-direction:column;gap:14px;min-width:0}
+.dsec{font-size:13px;font-weight:600;color:var(--text-2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:-6px}
+.big{font-size:40px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.big small{font-size:18px;color:var(--text-2);font-weight:500;margin-left:6px}
+.big.ok{color:var(--ok)}.big.bad{color:var(--bad)}.big.warn{color:var(--warn)}
+.bar.lg{height:12px;border-radius:6px;margin-top:4px}
+.verdict{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--bg)}
+.verdict.ok{border-color:rgba(61,220,151,.5)}.verdict.bad{border-color:rgba(255,107,107,.55)}
+.verdict b{display:block;font-size:15px}.verdict span{font-size:14px;color:var(--text-2);overflow-wrap:anywhere}
+.errbox{padding:12px 14px;border-radius:8px;border:1px solid rgba(255,107,107,.55);background:rgba(255,107,107,.06);font-size:14px;overflow-wrap:anywhere}
+.errbox b{color:var(--bad)}
+details.codev summary{cursor:pointer;color:var(--accent);font-size:14px;font-weight:500}
+details.codev pre.code{max-height:440px}
+.md{font-size:15px;line-height:1.6;display:flex;flex-direction:column;gap:8px;padding:16px 18px;border:1px solid var(--border);border-radius:8px;background:var(--bg);max-height:520px;overflow:auto}
+.md h4{font-size:18px;font-weight:600;margin-top:6px}.md h5{font-size:16px;font-weight:600;margin-top:6px}.md h6{font-size:15px;font-weight:600;color:var(--text-2)}
+.md ul{padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.md code{font:400 13px var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px}
+.md strong{font-weight:600}
+.trow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.trow:first-child{border-top:0}
+.trow .mono{font-size:13px;color:var(--text-2)}
+.trow .in{font-family:var(--mono);font-size:14px;overflow-wrap:anywhere}
+/* studio */
+.studio{display:none;grid-template-columns:360px minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);min-height:0;min-width:0;overflow:hidden}
+.app.studio-mode .demo{display:none}
+.studio.sdown{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.app.studio-mode .studio{display:grid}
+.sact{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:10px 24px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-2);min-width:0;overflow:hidden}
+.sact[hidden]{display:none}
+.smkt .lab{color:var(--accent)}
+.smkt .sact-t{gap:22px}
+.paid{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-radius:8px;background:rgba(61,220,151,.12);border:1px solid rgba(61,220,151,.55)}
+.paid b{color:var(--ok);font-size:16px;letter-spacing:.08em}
+.paid span{font-size:14px;color:var(--text)}
+.subqv{display:none;overflow:auto;padding:32px 40px 48px;min-width:0}
+.app.subq-mode .demo{display:none}
+.app.subq-mode .subqv{display:block}
+.seg{display:flex;gap:4px;padding:4px;border:1px solid var(--border2);border-radius:10px;background:var(--panel)}
+.seg button{flex:1;height:36px;border-radius:7px;font-size:14px;font-weight:600;color:var(--text-2)}
+.seg button[aria-selected="true"]{background:var(--accent);color:#0B0D10}
+.seg button:hover:not([aria-selected="true"]){color:var(--text)}
+.sbuy{display:flex;gap:8px;flex-wrap:wrap}
+.sbuy select,.sbuy input{height:42px;border-radius:9px;border:1px solid var(--border2);background:var(--bg);color:var(--text);padding:0 12px;font-size:15px;min-width:0}
+.sbuy select{flex:1 1 200px}.sbuy input{flex:2 1 240px}
+.sbuy select:focus,.sbuy input:focus{outline:none;border-color:var(--accent)}
+.sact .lab{font-weight:600;color:var(--ok);white-space:nowrap;text-transform:uppercase;letter-spacing:.06em;font-size:12px}
+.sact-t{display:flex;gap:18px;min-width:0;overflow:hidden;white-space:nowrap}
+.sact-i{overflow:hidden;text-overflow:ellipsis}.sact-i b{color:var(--text);font-weight:600}
+.scol{overflow:auto;min-width:0;min-height:0}
+.slist{border-right:1px solid var(--border);padding:20px 18px;display:flex;flex-direction:column;gap:16px}
+.sdetail{padding:28px 36px 48px}
+.snew{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid var(--border2);border-radius:var(--r);background:var(--panel)}
+.snew .dsec{margin:0}
+.snew textarea{width:100%;resize:vertical;min-height:84px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font:400 15px/1.5 var(--sans);color:var(--text)}
+.snew textarea:focus{outline:none;border-color:var(--accent)}
+.snew textarea::placeholder,.composer input::placeholder{color:#8B96A5}
+.srow{display:flex;gap:8px;flex-wrap:wrap}.srow .btn{flex:1 1 auto}
+.slhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.slhead h2{font-size:16px;font-weight:600}
+.scards{display:flex;flex-direction:column;gap:8px}
+.scard{display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--panel);cursor:pointer;transition:border-color .15s,background .15s}
+.scard:hover{border-color:var(--border2);background:var(--panel2)}
+.scard.sel{border-color:rgba(91,140,255,.65);box-shadow:inset 3px 0 var(--accent)}
+.sct{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.sct b{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.scm{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.scm .dnote{margin:0;font-size:13px}
+.slink{font-size:13px;font-weight:500;align-self:flex-start}
+.slog{display:flex;flex-direction:column;gap:14px;margin-top:14px;max-height:520px;overflow:auto}
+.slog .a-card{max-width:560px}
+.slog .msg.user{align-items:flex-end}.slog .msg.user .body{max-width:80%}
+@media (max-width:860px){
+  .app.studio-mode .studio{display:block;overflow:visible}
+  .app.subq-mode .subqv{padding:20px 16px 96px;overflow:visible}
+  .slist{border-right:0;border-bottom:1px solid var(--border);padding:16px}
+  .sdetail{padding:20px 16px 96px}
+  .sact{padding:10px 16px}
+  .scol{overflow:visible}
+}
+@media (max-width:1200px){
+  .app.demo-mode,.app.demo-mode.chat-closed{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:1200px){
+  .app,.app.chat-closed{grid-template-columns:268px minmax(0,1fr)}
+  .chat{position:fixed;left:0;right:0;bottom:0;height:min(82vh,720px);border:1px solid var(--border2);border-radius:16px 16px 0 0;z-index:20;transform:translateY(105%);transition:transform .3s ease,visibility 0s linear .3s;box-shadow:0 -12px 40px rgba(0,0,0,.5);visibility:hidden}
+  .app.chat-open .chat,.app.chat-closed.chat-open .chat{transform:none;visibility:visible;transition:transform .3s ease}
+  .fab{display:inline-flex;position:fixed;right:16px;bottom:16px;z-index:19;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  .app.chat-open~.fab{display:none}
+  #chatToggle{display:none}
+}
+@media (max-width:860px){
+  body{display:block}
+  .top{padding:12px 16px;gap:8px 12px}
+  .pitch{order:3;flex-basis:100%;font-size:14px}
+  .activity{display:none}
+  .app,.app.chat-closed{display:block}
+  .stepper{border-right:0;border-bottom:1px solid var(--border);padding:12px 0;overflow-x:auto;position:sticky;top:0;background:var(--bg);z-index:5}
+  .stepper h2,.walk{display:none}
+  .steps{flex-direction:row;gap:8px;padding:0 16px;width:max-content}
+  .sbtn{grid-template-columns:auto auto;gap:0 8px;padding:6px 12px 6px 6px;border-radius:999px;border-color:var(--border2);width:auto}
+  .sbtn .num{grid-row:auto;width:26px;height:26px;font-size:13px}
+  .sbtn .ss{display:none}
+  .sbtn .st{font-size:14px}
+  .sbtn[aria-current="step"]{box-shadow:none}
+  .main{padding:20px 16px 96px;overflow:visible}
+  .app.demo-mode .demo{padding:20px 16px 96px;overflow:visible}
+  .dwrap h1{font-size:24px}
+  .dtl{padding-left:0}.dtl::before{display:none}
+  .dnum{position:static;width:28px;height:28px;font-size:13px}
+  .big{font-size:32px}
+  .top{padding:12px 16px 4px}
+  .navrow{padding:0 8px}
+  .navsep{display:none}
+  .panel h1{font-size:24px}
+  .lead{font-size:16px}
+  .card{padding:16px}
+  .flow{flex-direction:column}
+  .node{min-width:0}
+  .arr{flex-basis:26px}
+  .arr svg{transform:rotate(90deg)}
+  .kv{grid-template-columns:1fr;gap:2px 0}
+  .kv dd{margin-bottom:10px}
+  .sbs,.a-diff{grid-template-columns:1fr}
+  .stepnav .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<header class="hdr">
+<div class="top">
+  <div class="brand">LAZARUS</div>
+  <div class="pitch">AI agents rebuild lost software — and you can verify every step.</div>
+  <div class="activity" id="activity" hidden><span class="dot"></span><span id="actText"></span></div>
+  <span class="pill off" id="mode"><i></i><span>CONNECTING</span></span>
+  <button class="hbtn" id="chatToggle" type="button" aria-controls="chat" aria-expanded="true">Hide chat</button>
+</div>
+<nav class="navrow" aria-label="Views">
+  <button class="navtab" type="button" data-v="studio">Studio</button>
+  <button class="navtab" type="button" data-v="how">How it works</button>
+  <span class="navsep">Real-world demos</span>
+  <button class="navtab" type="button" data-v="banking">Banking</button>
+  <button class="navtab" type="button" data-v="acquisition">Acquisition</button>
+  <button class="navtab" type="button" data-v="audit">Audit &amp; compliance</button>
+  <button class="navtab" type="button" data-v="subq">SubQ</button>
+</nav>
+</header>
+
+<div class="app" id="app">
+  <nav class="stepper" aria-label="Proof steps">
+    <h2>The proof, step by step</h2>
+    <ol class="steps" id="steps"></ol>
+    <button class="btn walk" id="walk" type="button">Walk me through it</button>
+  </nav>
+
+  <main class="main" id="main" tabindex="-1"><div class="panel" id="panel"></div></main>
+  <section class="demo" id="demoMain" aria-live="polite"></section>
+  <section class="studio" id="studioMain"></section>
+  <section class="subqv" id="subqMain" aria-live="polite"></section>
+
+  <aside class="chat" id="chat" aria-label="Ask the agents">
+    <div class="chat-h">
+      <b>Ask the agents</b>
+      <button class="cbtn" id="histBtn" type="button" aria-expanded="false">History</button>
+      <button class="cbtn" id="newBtn" type="button">New chat</button>
+      <button class="cbtn" id="chatX" type="button" aria-label="Close chat">Close</button>
+    </div>
+    <div class="models" id="models"><span class="lab">Last answer used</span></div>
+    <div class="hist" id="hist">
+      <div class="chat-h"><b>Past sessions</b><span class="v-caption" id="histMeta"></span><button class="cbtn" id="histX" type="button">Back</button></div>
+      <div class="hist-list" id="sessList"></div>
+    </div>
+    <div class="msgs" id="msgs" aria-live="polite"></div>
+    <div class="sugg" id="sugg"></div>
+    <form class="composer" id="composer">
+      <button class="btn" id="clip" type="button" title="Upload a file to extract claims" aria-label="Upload a file">+</button>
+      <input type="text" id="input" placeholder="Ask about the rebuild…" autocomplete="off" aria-label="Message">
+      <button class="btn primary" id="sendBtn" type="submit">Send</button>
+      <input type="file" id="file" hidden>
+    </form>
+  </aside>
+</div>
+<button class="btn primary fab" id="fab" type="button">Ask the agents</button>
+
+<footer class="foot" id="foot">Powered by Meta Muse · Google Gemini · Fetch.ai (Agentverse · ASI:One · uAgents) · SubQ · MongoDB Atlas</footer>
+
+<script>
+/* The ONE place to point this page at a LAZARUS API. */
+const API_BASE = "http://127.0.0.1:8030";
+</script>
+<script>
+/* OFFLINE SEED — inlined from demo-ui/templates/lazarus-api.js. Used ONLY when the API is down; everything is labelled sample. */
+const REAL_SEAL = { tx:"7A3C8BE99C0A78365C4F6A13EC769EFFA7FE5844535C1D1A274F794742E6A9D8", at:"2026-11-07T06:22:49Z",
+  source:"148eaaad7fdf3cdffa67275362b3b630e1b17daee6aa637b271c750b5abf98f9", heldout:"35d544ddda162806b5d42c45b63b8d68d074de93a94ac624e062d005c13ca511" };
+const O = (id, endpoint, claim, evidence) => ({ id, endpoint, claim, status:"OBSERVED", evidence, source:"probe" });
+const seedLedger = () => [];  // public build: no offline claims. Everything shown comes from the live LAZARUS API.
+const SEED_DIVERGENCES = [
+  { match:/$^/, fixedIn:0, request:{ method:"GET", path:"/", headers:{}, body:null },
+    original:{ status:0, body:{} }, port:{ status:0, body:{} } },
+];
+function seedOrder() { let x = 1107; const ids = Array.from({ length:200 }, (_, i) => i + 1); for (let i = 199; i > 0; i--) { x = (x * 48271) % 2147483647; const j = x % (i + 1); [ids[i], ids[j]] = [ids[j], ids[i]]; } return ids.map(n => "HO-" + String(n).padStart(3, "0")); }
+function seedVersions() {
+  const lost = ["HO-117","HO-203","HO-044","HO-161"], order = seedOrder().filter(i => !lost.includes(i));
+  const v1 = [...lost, ...order.slice(0, 132)], v2 = [...v1, ...order.slice(132, 158)], v3 = v2.filter(i => !lost.includes(i));
+  return [
+    { version:1, heldout_equivalence:v1.length / 200, parent:null, regressions:[], matched:v1, commit:"seed-a1f3", status:"ADOPTED", reason:"Eligible. First version." },
+    { version:2, heldout_equivalence:v2.length / 200, parent:1, regressions:[], matched:v2, commit:"seed-b27c", status:"ADOPTED", reason:"Higher score, zero regressions. Learned: probe whitespace variants on string keys." },
+    { version:3, heldout_equivalence:v3.length / 200, parent:2, regressions:lost, matched:v3, commit:"seed-c90e", status:"ROLLED_BACK", reason:"Blocked. Lower score and 4 regressions. A deliberately bad patch, seeded to show the gate working.", seeded:true },
+  ];
+}
+</script>
+<script>
+(() => {
+"use strict";
+const BASE = API_BASE, EXPLORER = "https://explore-dorado.fetch.ai/transactions/";
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function h(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; }
+const str = v => v == null ? "" : String(v);
+const short = (s, a = 6, b = 4) => { s = str(s); return s.length > a + b + 1 ? s.slice(0, a) + "…" + s.slice(-b) : s; };
+const pct = v => { let n = +v; if (!isFinite(n)) return "–"; if (n <= 1) n *= 100; return (Math.abs(n - Math.round(n)) < .05 ? Math.round(n) : n.toFixed(1)) + "%"; };
+const fmtTs = t => { const d = new Date(t); return isNaN(d) ? str(t) : d.toISOString().slice(0, 16).replace("T", " ") + " UTC"; };
+const hhmmss = d => { const x = new Date(d); return isNaN(x) ? "--:--:--" : x.toTimeString().slice(0, 8); };
+const ago = t => { const s = (Date.now() - new Date(t)) / 1000; if (!isFinite(s)) return ""; if (s < 60) return "just now"; if (s < 3600) return Math.round(s / 60) + " min ago"; return Math.round(s / 3600) + " h ago"; };
+const store = { get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const uid = () => "s-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const MODE = { live:false };
+const State = { snap:null, trust:null, session:null, step:0 };
+
+/* ---------- transport ---------- */
+async function api(path, opts = {}, ms = 30000) {
+  const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms);
+  try {
+    const r = await fetch(BASE + path, Object.assign({ signal:ac.signal }, opts));
+    let data = null; try { data = await r.json(); } catch {}
+    if (!r.ok) { const e = new Error((data && data.detail) ? str(data.detail) : path + " returned " + r.status); e.status = r.status; e.data = data; throw e; }
+    return data;
+  } catch (e) { if (e.name === "AbortError") { const x = new Error(path + " took longer than " + Math.round(ms / 1000) + " s"); x.timeout = true; throw x; } throw e; }
+  finally { clearTimeout(t); }
+}
+const post = (path, body, ms) => api(path, { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(body) }, ms);
+
+/* ---------- offline sample backend ---------- */
+const Sample = (() => {
+  const versions = seedVersions(), ledger = seedLedger(), T0 = Date.now();
+  const r0 = SEED_DIVERGENCES[0];
+  const divergences = [{ id:"D-0001", input:r0.request, original:r0.original, port:r0.port, diff:{ discount_cents:[0,380] }, found_by:"scout", port_version:1, tx_bounty:null }];
+  const sessions = store.get("lazarus.sample.sessions") || {};
+  const adopted = 2;
+  function snapshot() {
+    return { seal:{ tx_hash:REAL_SEAL.tx, source_hash:REAL_SEAL.source, heldout_hash:REAL_SEAL.heldout, timestamp:REAL_SEAL.at, network:"fetchai-stable-testnet (dorado-1)" },
+      claims:ledger.map(c => ({ ...c })), versions, divergences, payments:[],
+      counts:{ probes:40, model_calls:0, verified_bounties:0, challenges:7 }, coverage:{ version:adopted }, real:false };
+  }
+  function trust() { return { version:adopted, bounty_fet:6.8, base_fet:5, unbroken_minutes:Math.round((Date.now() - T0) / 60000) + 42, challenges_survived:7, last_divergence_at:null, history:[] }; }
+  function challenge(request) {
+    const s = JSON.stringify(request), rule = SEED_DIVERGENCES.find(r => r.match.test(s) && adopted < r.fixedIn);
+    if (!rule) { const same = { status:0, body:{} }; return { version:adopted, input:request, original:same, port:same, diverged:false, divergence_id:null, new:false, found_by:"you" }; }
+    return { version:adopted, input:rule.request, original:rule.original, port:rule.port, diverged:true, divergence_id:"D-0002", new:true, found_by:"you" };
+  }
+  function addTurn(sid, turn) {
+    const s = sessions[sid] || (sessions[sid] = { session_id:sid, title:"Session", updated_at:null, turns:0, msgs:[] });
+    s.msgs.push(turn); s.turns = s.msgs.filter(m => m.role === "user").length; s.updated_at = turn.at;
+    if (turn.role === "user" && s.turns === 1) s.title = turn.text.slice(0, 60);
+    store.set("lazarus.sample.sessions", sessions);
+  }
+  let fileN = 0, buildN = 0; const builds = {}, files = {};
+  return { snapshot, trust, challenge, addTurn,
+    sessions:() => Object.values(sessions).map(({ msgs, ...s }) => s).sort((a, b) => str(b.updated_at).localeCompare(str(a.updated_at))),
+    history:sid => (sessions[sid] && sessions[sid].msgs) || [],
+    async files(file) {
+      let text = ""; try { text = await file.slice(0, 400000).text(); } catch {}
+      const seen = new Set(), claims = [];
+      for (const m of text.matchAll(/\b(GET|POST|PUT|DELETE|PATCH)\s+(\/[A-Za-z0-9_\/{}\-.:]*)/g)) { const k = m[1] + " " + m[2]; if (seen.has(k) || claims.length >= 24) continue; seen.add(k); claims.push({ endpoint:k, claim:"Route named in the uploaded file.", confidence:.5 }); }
+      if (!claims.length) claims.push({ endpoint:"(none found)", claim:"No HTTP routes appear as text in this file. A real binary needs the live API.", confidence:0 });
+      const id = "sample-file-" + (++fileN); files[id] = { name:file.name, claims };
+      return { file_id:id, name:file.name, bytes:file.size, claims, used:[] };
+    },
+    build(fid) { const id = "sample-build-" + (++buildN); builds[id] = { t:Date.now(), f:files[fid] }; return { build_id:id }; },
+    buildStatus(id) {
+      const b = builds[id]; if (!b) return { status:"failed", error:"unknown build" };
+      if (Date.now() - b.t < 2600) return { status:"running" };
+      const eps = (b.f ? b.f.claims : []).filter(c => /^[A-Z]+ \//.test(c.endpoint));
+      const routes = eps.map(c => { const [m, p] = c.endpoint.split(" "); return `@app.${m.toLowerCase()}("${p}")\ndef h_${p.replace(/[^A-Za-z0-9]+/g, "_")}():\n    raise NotImplementedError  # sample: no model called\n`; });
+      const preview = "# SAMPLE build: offline, no Muse Code call was made.\nfrom fastapi import FastAPI\napp = FastAPI()\n\n" + (routes.join("\n") || "# no routes were extracted\n");
+      return { status:"done", files:[{ path:"port/app.py", bytes:preview.length }], preview, sentinel:{ passed:true, findings:[] }, used:[] };
+    },
+  };
+})();
+
+const B = {
+  snapshot:() => MODE.live ? api("/snapshot", {}, 10000) : Promise.resolve(Sample.snapshot()),
+  trust:() => MODE.live ? api("/trust", {}, 10000) : Promise.resolve(Sample.trust()),
+  events:() => MODE.live ? api("/events", {}, 8000) : Promise.resolve([]),
+  sessions:() => MODE.live ? api("/sessions", {}, 8000) : Promise.resolve(Sample.sessions()),
+  history:sid => MODE.live ? api("/history?session_id=" + encodeURIComponent(sid), {}, 8000) : Promise.resolve(Sample.history(sid)),
+  challenge:req => MODE.live ? post("/challenge", { request:req }, 90000) : sleep(600).then(() => Sample.challenge(req)),
+  files:file => { if (!MODE.live) return sleep(600).then(() => Sample.files(file)); const fd = new FormData(); fd.append("file", file); return api("/files", { method:"POST", body:fd }, 120000); },
+  build:fid => MODE.live ? post("/build", { file_id:fid }, 30000) : Promise.resolve(Sample.build(fid)),
+  buildStatus:id => MODE.live ? api("/build/" + encodeURIComponent(id), {}, 15000) : Promise.resolve(Sample.buildStatus(id)),
+};
+
+/* ---------- normalisers ---------- */
+const cstat = s => { s = str(s).toLowerCase(); if (/refut|wrong|false/.test(s)) return "refuted"; if (/prov|observ|verif|confirm/.test(s)) return "proven"; return "guess"; };
+const isProven = c => cstat(c.status) === "proven" && Array.isArray(c.evidence) && c.evidence.length > 0;
+const vScore = v => +(v.heldout_equivalence ?? v.equivalence ?? 0);
+const isAdopted = v => /ADOPT/i.test(str(v.status));
+const isBlocked = v => /ROLL|BLOCK|REJECT/i.test(str(v.status));
+const isSeeded = v => !!v.seeded || /seed/i.test(str(v.reason)) || /seeded/i.test(str(v.label));
+const versions = s => [...((s && s.versions) || [])].sort((a, b) => a.version - b.version);
+function currentVersion(s) { const vs = versions(s), cov = s && s.coverage && s.coverage.version; return vs.find(v => v.version === cov) || vs.filter(isAdopted).pop() || null; }
+
+/* ---------- small UI helpers ---------- */
+const sampleTag = () => MODE.live ? null : h("span", "tag sample", "sample");
+function card(title, sub, tagEl, real) {
+  const c = h("section", "card"), hd = h("h3", null, title); if (tagEl) hd.append(tagEl); const st = real ? null : sampleTag(); if (st) hd.append(st);
+  c.append(hd); if (sub) c.append(h("p", "sub", sub)); return c;
+}
+function metric(label, value, tone, unit) {
+  const m = h("div", "metric" + (tone ? " " + tone : "")), v = h("div", "v", value);
+  if (unit) v.append(h("small", null, unit)); if (!MODE.live) v.append(h("small", null, "sample"));
+  m.append(v, h("div", "l", label)); return m;
+}
+function waitingBox(title, text) { const w = h("div", "waiting"); const d = h("div"); d.append(h("b", null, title), h("p", null, text)); w.append(h("span", "spin"), d); return w; }
+function kv(pairs) { const dl = h("dl", "kv"); pairs.forEach(([k, v]) => { dl.append(h("dt", null, k)); const dd = h("dd"); if (v instanceof Node) dd.append(v); else dd.textContent = str(v); dl.append(dd); }); return dl; }
+const monoEl = t => h("span", "mono", t);
+function txLink(tx) { const a = h("a", "mono", short(tx, 12, 10)); a.href = EXPLORER + encodeURIComponent(tx); a.target = "_blank"; a.rel = "noopener"; a.title = tx; return a; }
+function tagFor(ok) { return ok === true ? h("span", "tag ok", "PASS") : ok === false ? h("span", "tag bad", "FAIL") : h("span", "tag warn", "WAIT"); }
+function rawDetails(obj) { const d = h("details", "raw"); d.append(h("summary", null, "Show raw response")); d.append(h("pre", "code", JSON.stringify(obj, null, 2))); return d; }
+function resultBox(tone, title, nodes, raw) {
+  const r = h("div", "result " + tone), hd = h("div", "rhead");
+  hd.append(h("span", "tag " + tone, tone === "ok" ? "VERIFIED" : tone === "bad" ? "FAILED" : "NOT YET"), h("b", null, title), h("span", "when", "Checked live just now · " + hhmmss(Date.now())));
+  r.append(hd); nodes.forEach(n => n && r.append(n)); if (raw !== undefined) r.append(rawDetails(raw)); return r;
+}
+function checkRow(c) { const row = h("div", "check"); row.append(tagFor(c.ok), h("div", "n", str(c.name)), h("div", "d", str(c.detail))); return row; }
+function diffPanes(lt, lv, rt, rv) {
+  const fmt = x => JSON.stringify(x, null, 2) || "null";
+  const ob = (lv && lv.body) || {}, pb = (rv && rv.body) || {}, keys = new Set();
+  if (rv && typeof ob === "object" && typeof pb === "object") Object.keys({ ...ob, ...pb }).forEach(k => { if (JSON.stringify(ob[k]) !== JSON.stringify(pb[k])) keys.add(k); });
+  if (rv && lv && lv.status !== rv.status) keys.add("status");
+  const pane = (title, x) => { const p = h("div", "pane"), ph = h("div", "ph"); ph.append(h("span", null, title)); p.append(ph); const pre = h("pre");
+    if (typeof x === "string") { p.append(h("p", null, x)); return p; }
+    fmt({ status:x && x.status, body:x && x.body }).split("\n").forEach(line => { const d = h("div", null, line || " "); if ([...keys].some(k => line.includes('"' + k + '"'))) d.className = "hit"; pre.append(d); }); p.append(pre); return p; };
+  const g = h("div", "sbs"); g.append(pane(lt, lv), pane(rt, rv)); return g;
+}
+
+/* ---------- step definitions ---------- */
+const arrowSvg = () => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 26 14"); s.setAttribute("aria-hidden", "true"); const p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d", "M1 7h22M17 1.5 23 7l-6 5.5"); s.append(p); return s; };
+const N = (t, s, k) => ({ t, s, k });
+const STEPS = [
+  { key:"seal", title:"Seal", short:"Lock the exam",
+    head:"Seal — lock the exam before any work starts",
+    what:"Before the agents do anything, the fingerprints (hashes) of the lost source code and of 200 hidden test cases are written into a Fetch.ai testnet transaction. After that, nobody can quietly change the exam.",
+    flow:[N("Source code","hashed","prog"), N("200 hidden tests","hashed","prog"), N("Fetch testnet tx","dorado-1 memo","chain"), N("Exam locked","cannot be edited","ok")],
+    vtext:"Ask the server to re-check the transaction on the Fetch chain and confirm its memo carries both hashes." },
+  { key:"dig", title:"Dig", short:"Probe the old program",
+    head:"Dig — learn what the old program does",
+    what:"Agents send questions (probes) to the running old program and record its answers. A claim counts as PROVEN only when a real probe trace backs it; otherwise it stays a GUESS.",
+    flow:[N("Muse Code","designs a probe","agent"), N("Old program","answers","prog"), N("Muse Spark","judges the answer","agent"), N("Claim","PROVEN with a trace","ok")],
+    vtext:"Re-ask the old program GET /healthz right now and compare its answer with what the claim says." },
+  { key:"port", title:"Port", short:"Write the new program",
+    head:"Port — write a new program from proven claims",
+    what:"Muse Code writes a new program using only the proven claims. Before it is ever run, the Sentinel agent scans the code for anything unsafe.",
+    flow:[N("Proven claims","no guesses","ok"), N("Muse Code","writes the port","agent"), N("Sentinel","scans for unsafe code","agent"), N("New version","safe to run","ok")],
+    vtext:"Fetch the version record fresh from the server and show what was actually produced." },
+  { key:"gate", title:"Gate", short:"Score on hidden tests",
+    head:"Gate — an independent judge scores it",
+    what:"The independent Oracle runs the new program on the 200 sealed hidden tests and counts matching answers. It never reads the code. A version is adopted only if it scores higher AND breaks nothing that passed before.",
+    flow:[N("New version","the candidate","prog"), N("Oracle","runs 200 hidden tests","agent"), N("Score","and regressions","prog"), N("Adopt or reject","higher + no regressions","ok")],
+    vtext:"Ask the server to re-check the gate rule against every recorded version." },
+  { key:"hunt", title:"Hunt", short:"Anyone can challenge",
+    head:"Hunt — anyone can try to break it",
+    what:"Anyone can send the same request to the old and the new program, for free or with a 1 FET testnet stake. A real difference pays a bounty in FET, and SubQ gives a second opinion on whether it is a genuine behaviour change.",
+    flow:[N("You","send any request","agent"), N("Old program","answer A","prog"), N("New program","answer B","prog"), N("Different?","SubQ second opinion","prog"), N("Bounty","paid in FET","chain")],
+    vtext:"Send a real request to both programs now and see the two answers side by side." },
+  { key:"improve", title:"Improve", short:"Learn from mistakes",
+    head:"Improve — every found difference teaches the agents",
+    what:"Each difference becomes a lesson. Muse Code writes a patch and the gate decides again. A deliberately bad patch (labelled “seeded”) is there to prove the gate blocks it.",
+    flow:[N("Difference","found by a hunter","bad"), N("Agents learn","new claim","agent"), N("Muse Code","writes a patch","agent"), N("Gate","decides again","agent"), N("Adopted or blocked","no regressions allowed","ok")],
+    vtext:"Recompute the gate rule in your browser from the raw version history." },
+  { key:"receipt", title:"Receipt", short:"Proof anyone can check",
+    head:"Receipt — a proof anyone can verify",
+    what:"Everything above is bundled into a proof receipt whose id is its sha256 fingerprint. Anyone can check it against the chain: untampered, sealed on chain, gate rule held.",
+    flow:[N("Seal + claims + versions","the record","prog"), N("sha256","fingerprint","agent"), N("Receipt id","one hash","prog"), N("Anyone","checks it vs chain","ok")],
+    vtext:"Fetch the receipt and run all three checks live." },
+];
+const Results = {};
+
+function stepStatus(i, s) {
+  if (!s) return ["waiting", "Waiting"];
+  const vs = versions(s), cur = currentVersion(s);
+  switch (STEPS[i].key) {
+    case "seal": return s.seal && s.seal.tx_hash ? ["done", "Sealed"] : ["waiting", "Waiting"];
+    case "dig": { const p = (s.claims || []).filter(isProven).length; return (s.claims || []).length ? ["done", p + " proven"] : ["waiting", "Probing"]; }
+    case "port": return vs.length ? ["done", vs.length + " version" + (vs.length > 1 ? "s" : "")] : ["waiting", "In progress"];
+    case "gate": return cur ? ["done", "v" + cur.version + " adopted"] : vs.some(isBlocked) ? ["blocked", "Blocked"] : ["waiting", "Waiting"];
+    case "hunt": return cur ? ["done", "Open · " + (s.divergences || []).length + " found"] : ["waiting", "Opens at v1"];
+    case "improve": return vs.some(isBlocked) ? ["blocked", "Bad patch blocked"] : vs.length > 1 ? ["done", vs.length + " rounds"] : ["waiting", "Waiting"];
+    case "receipt": return s.seal ? ["done", "Ready to check"] : ["waiting", "Waiting"];
+  }
+}
+
+/* stepper */
+function renderStepper() {
+  const ol = $("#steps"); ol.replaceChildren();
+  STEPS.forEach((st, i) => {
+    const li = h("li"), b = h("button", "sbtn"); b.type = "button"; b.dataset.i = i;
+    if (i === State.step) b.setAttribute("aria-current", "step");
+    const [cls, lab] = stepStatus(i, State.snap); const ss = h("span", "ss s-" + cls); ss.append(h("i"), h("span", null, lab + (MODE.live ? "" : " · sample")));
+    b.append(h("span", "num", i + 1), h("span", "st", st.title), ss);
+    b.addEventListener("click", () => { stopWalk(); go(i); });
+    li.append(b); ol.append(li);
+  });
+  const cur = ol.querySelector('[aria-current="step"]'); if (cur && innerWidth <= 860) cur.scrollIntoView({ block:"nearest", inline:"center", behavior:RM ? "auto" : "smooth" });
+}
+
+/* data per step */
+function stepData(key, s) {
+  const out = [];
+  const vs = versions(s), cur = currentVersion(s), claims = s.claims || [];
+  if (key === "seal") {
+    const c = card("What was sealed", "Read straight from the API. Open the transaction to see it on the Fetch explorer.");
+    if (!s.seal) { c.append(waitingBox("In progress — waiting for the agents", "No seal recorded yet.")); out.push(c); return out; }
+    c.append(kv([["Transaction", txLink(s.seal.tx_hash)], ["Network", str(s.seal.network)], ["Sealed at", fmtTs(s.seal.timestamp)], ["Source hash", monoEl(s.seal.source_hash)], ["Hidden tests hash", monoEl(s.seal.heldout_hash)]]));
+    out.push(c);
+  }
+  if (key === "dig") {
+    const p = claims.filter(isProven).length, g = claims.filter(c => cstat(c.status) === "guess").length, r = claims.filter(c => cstat(c.status) === "refuted").length;
+    const m = h("div", "metrics"); m.append(metric("probes sent", str((s.counts && s.counts.probes) ?? "–")), metric("proven claims", p, "ok"), metric("guesses", g, "warn"), metric("refuted", r, r ? "bad" : null), metric("model calls", str((s.counts && s.counts.model_calls) ?? "–")));
+    out.push(m);
+    const c = card("Claims about the old program", "Proven claims cite a probe trace id. Guesses have no trace yet and are not used to write code.");
+    if (!claims.length) c.append(waitingBox("In progress — waiting for the agents", "The agents are still probing; no claims yet."));
+    const list = h("div", "list"); const sorted = [...claims].sort((a, b) => isProven(b) - isProven(a));
+    let showAll = false;
+    const draw = () => { list.replaceChildren(); (showAll ? sorted : sorted.slice(0, 6)).forEach(cl => {
+      const pr = isProven(cl), st = cstat(cl.status), li = h("div", "li"), t = h("div", "t clamp", cl.claim);
+      t.title = "Click to expand"; t.style.cursor = "pointer"; t.addEventListener("click", () => t.classList.toggle("clamp"));
+      li.append(t, h("span", "tag " + (pr ? "ok" : st === "refuted" ? "bad" : "warn"), pr ? "PROVEN" : st === "refuted" ? "REFUTED" : "GUESS"));
+      const meta = h("div", "m"); meta.append(monoEl(cl.id), " · " + str(cl.endpoint) + " · ");
+      if (Array.isArray(cl.evidence) && cl.evidence.length) { meta.append("trace "); meta.append(monoEl(cl.evidence.join(", "))); } else meta.append("no probe trace yet" + (cl.confidence != null ? " · confidence " + (+cl.confidence).toFixed(2) : ""));
+      li.append(meta); list.append(li); });
+      if (sorted.length > 6) { const b = h("button", "linkbtn", showAll ? "Show fewer" : "Show all " + sorted.length + " claims"); b.type = "button"; b.addEventListener("click", () => { showAll = !showAll; draw(); }); list.append(b); } };
+    draw(); c.append(list); out.push(c);
+  }
+  if (key === "port") {
+    const c = card("Versions written so far", "Each version is a complete new program. Sentinel checks it before the Oracle runs it.");
+    if (!vs.length) c.append(waitingBox("In progress — waiting for the agents", "Muse Code is writing version 1 from the proven claims. It will appear here automatically."));
+    else { const w = h("div", "scroll-x"), t = h("table", "vtable"), hr = h("tr"); ["Version", "Built from", "Commit", "Status"].forEach(x => hr.append(h("th", null, x))); t.append(hr);
+      [...vs].reverse().forEach(v => { const tr = h("tr"); tr.append(h("td", null, "v" + v.version), h("td", null, v.parent ? "v" + v.parent : "proven claims"));
+        const td = h("td"); td.append(monoEl(str(v.commit || "–"))); tr.append(td);
+        const ts = h("td"); ts.append(h("span", "tag " + (isAdopted(v) ? "ok" : isBlocked(v) ? "bad" : "warn"), str(v.status || "PENDING").replace(/_/g, " "))); tr.append(ts); t.append(tr); });
+      w.append(t); c.append(w); }
+    out.push(c);
+  }
+  if (key === "gate") {
+    const c = card("Gate decisions", "Score = share of the 200 hidden tests where the new program gives the same answer as the old one.");
+    if (!vs.length) c.append(waitingBox("In progress — waiting for the agents", "The Oracle has nothing to score yet. Version 1 is being generated."));
+    const list = h("div", "list");
+    [...vs].reverse().forEach(v => { const li = h("div", "li"), regs = (v.regressions || []).length, d = h("div", "t");
+      const top = h("div"); top.append(h("b", null, "v" + v.version + " · " + pct(vScore(v))), " " + (v.matched ? "(" + v.matched.length + " of 200 match)" : ""));
+      const bar = h("div", "bar" + (isBlocked(v) ? " bad" : "")), f = h("i"); f.style.width = Math.min(100, vScore(v) * (vScore(v) <= 1 ? 100 : 1)) + "%"; bar.append(f); d.append(top, bar);
+      li.append(d, h("span", "tag " + (isAdopted(v) ? "ok" : isBlocked(v) ? "bad" : "warn"), isAdopted(v) ? "ADOPTED" : isBlocked(v) ? "BLOCKED" : str(v.status || "PENDING")));
+      li.append(h("div", "m", regs + " regression" + (regs === 1 ? "" : "s") + " · " + str(v.reason) + (isSeeded(v) ? " (seeded)" : ""))); list.append(li); });
+    c.append(list); out.push(c);
+  }
+  if (key === "hunt") {
+    const tr = State.trust || {};
+    const m = h("div", "metrics"); m.append(metric("trust price bounty", tr.bounty_fet != null ? str(tr.bounty_fet) : "–", "ok", "FET"), metric("unbroken", str(tr.unbroken_minutes ?? "–"), null, "min"), metric("challenges survived", str(tr.challenges_survived ?? "–")), metric("differences found", (s.divergences || []).length, (s.divergences || []).length ? "bad" : null));
+    out.push(m);
+    const c = card("Found differences", "Each one is a real input where the new program answered differently from the old one.");
+    const dv = s.divergences || [];
+    if (!cur && !dv.length) c.append(waitingBox("In progress — waiting for the agents", "Hunting opens once version 1 is adopted. The bounty starts at " + str(tr.base_fet ?? 5) + " FET and grows each hour nobody breaks the port."));
+    else if (!dv.length) c.append(h("p", "sub", "No differences found yet. The bounty keeps growing."));
+    const list = h("div", "list");
+    dv.slice(-6).reverse().forEach(d => { const li = h("div", "li"), inp = d.input || {};
+      li.append(h("div", "t", str(inp.method) + " " + str(inp.path)), h("span", "tag bad", str(d.id)));
+      const meta = h("div", "m", "found by " + str(d.found_by) + " on v" + str(d.port_version) + " · "); if (d.tx_bounty) meta.append("bounty ", txLink(d.tx_bounty)); else meta.append("no bounty tx");
+      li.append(meta); list.append(li); });
+    c.append(list);
+    const pay = s.payments || [];
+    if (pay.length) { const pl = h("div", "list"); pl.style.marginTop = "12px"; pay.slice(-5).reverse().forEach(p => { const li = h("div", "li"); li.append(h("div", "t", str(p.kind) + " · " + str(p.amount_fet) + " FET"), txLink(p.tx_hash)); li.append(h("div", "m", "hunter " + str(p.hunter))); pl.append(li); }); c.append(h("h3", null, "FET payments on chain"), pl); }
+    out.push(c);
+  }
+  if (key === "improve") {
+    const c = card("Learning rounds", "Read top to bottom: what was found, what was patched, what the gate decided.");
+    if (vs.length < 2 && !(s.divergences || []).length) c.append(waitingBox("In progress — waiting for the agents", vs.length ? "Version 1 exists; the first improvement round starts when a difference is found." : "Improvement starts after version 1 is adopted and hunted."));
+    const list = h("div", "list");
+    vs.forEach(v => { const li = h("div", "li"), regs = (v.regressions || []).length;
+      li.append(h("div", "t", "v" + v.version + (v.parent ? " patched from v" + v.parent : " — first version") + " · " + pct(vScore(v))));
+      const tg = h("span", "tag " + (isAdopted(v) ? "ok" : isBlocked(v) ? "bad" : "warn"), isAdopted(v) ? "ADOPTED" : isBlocked(v) ? "BLOCKED" : str(v.status || "PENDING")); li.append(tg);
+      const m = h("div", "m"); if (isSeeded(v)) m.append(h("span", "tag warn", "SEEDED BAD PATCH"), " "); m.append(regs + " regressions · " + str(v.reason)); li.append(m); list.append(li); });
+    c.append(list); out.push(c);
+  }
+  if (key === "receipt") {
+    const c = card("What the receipt binds together", "The receipt id is the sha256 of exactly these facts. Change one and the id no longer matches.");
+    const p = claims.filter(isProven).length;
+    c.append(kv([["Seal transaction", s.seal ? txLink(s.seal.tx_hash) : "–"], ["Claims", claims.length + " (" + p + " proven)" + (MODE.live ? "" : " · sample")], ["Probes", str(s.counts && s.counts.probes) + (MODE.live ? "" : " · sample")], ["Versions", vs.length ? vs.map(v => "v" + v.version + " " + (isAdopted(v) ? "adopted" : isBlocked(v) ? "blocked" : "pending")).join(", ") : "none yet"], ["Receipt id", Results.receiptId ? monoEl(Results.receiptId) : "appears after you verify"]]));
+    out.push(c);
+  }
+  return out;
+}
+
+/* ---------- verify actions (all real, live only) ---------- */
+function offlineNote() { return resultBox("warn", "Live check unavailable offline", [h("p", "rnote", "The API at " + BASE + " is not reachable, so nothing was checked. This page never shows a pass it did not get from the live API.")]); }
+function errorBox(e) { return resultBox(e.status === 409 ? "warn" : "bad", e.status === 409 ? "Not available yet" : "The live check did not complete", [h("p", "rnote", "The server said: " + str(e.message))], e.data || undefined); }
+async function getReceipt() { const r = await api("/receipt/verify", {}, 120000); if (r && r.receipt && r.receipt.id) Results.receiptId = r.receipt.id; return r; }
+
+const VERIFY = {
+  async seal() {
+    const r = await getReceipt(), checks = (r.check && r.check.checks) || [];
+    const chain = checks.find(c => /chain/i.test(c.name)), tamp = checks.find(c => /tamper/i.test(c.name));
+    const tx = (r.receipt && r.receipt.seal && r.receipt.seal.tx) || (State.snap && State.snap.seal && State.snap.seal.tx_hash);
+    const nodes = [chain ? checkRow(chain) : h("p", "rnote", "No chain check in the response."), tamp ? checkRow(tamp) : null];
+    if (tx) { const p = h("p", "rnote"); p.append("Check it with your own eyes: ", (() => { const a = txLink(tx); a.textContent = "open the transaction on the Fetch explorer"; return a; })(), " and look for both hashes in the memo."); nodes.push(p); }
+    return resultBox(chain && chain.ok === true ? "ok" : chain && chain.ok === false ? "bad" : "warn", chain && chain.ok ? "The seal is on chain and carries both hashes" : "The chain check did not pass", nodes, r);
+  },
+  async dig() {
+    const s = State.snap || {}, claim = (s.claims || []).find(c => /healthz/.test(str(c.endpoint)) && isProven(c)) || (s.claims || []).find(c => /healthz/.test(str(c.endpoint)));
+    let r;
+    try { r = await B.challenge({ method:"GET", path:"/healthz", headers:{}, body:null }); }
+    catch (e) { if (e.status === 409) return resultBox("warn", "Not available yet: " + str(e.message), [h("p", "rnote", "The re-ask button goes through the public challenge endpoint, which opens once version 1 is adopted. Until then only the agents can probe the old program. The claim and its trace id are shown below."), claim ? (() => { const p = h("div", "pane"), ph = h("div", "ph"); ph.append(h("span", null, "Claim " + claim.id + " · trace " + ((claim.evidence || []).join(", ") || "none"))); p.append(ph, h("p", null, claim.claim)); p.style.marginTop = "12px"; return p; })() : null], e.data); throw e; }
+    const ob = r.original || {}, body = ob.body;
+    const vals = body && typeof body === "object" ? Object.values(body).map(v => JSON.stringify(v)) : [JSON.stringify(body)];
+    const consistent = claim ? String(ob.status) && claim.claim.includes(String(ob.status)) && vals.every(v => claim.claim.replace(/\s/g, "").includes(String(v).replace(/\s/g, ""))) : null;
+    const g = h("div", "sbs");
+    const left = h("div", "pane"), lh = h("div", "ph"); lh.append(h("span", null, claim ? "Claim " + claim.id + " · trace " + (claim.evidence || []).join(", ") : "No /healthz claim")); left.append(lh, h("p", null, claim ? claim.claim : "–"));
+    const right = h("div", "pane"), rh = h("div", "ph"); rh.append(h("span", null, "Old program answered just now")); const pre = h("pre"); pre.append(h("div", null, JSON.stringify({ status:ob.status, body }, null, 2))); right.append(rh, pre);
+    g.append(left, right);
+    return resultBox(consistent ? "ok" : "warn", consistent ? "The old program's live answer matches the claim" : "Compare the claim with the live answer", [g], r);
+  },
+  async port() {
+    const s = await api("/snapshot", {}, 15000); State.snap = s; const vs = versions(s);
+    if (!vs.length) return resultBox("warn", "No version on record yet", [h("p", "rnote", "The server's live record has 0 versions. Muse Code is still generating version 1 from " + (s.claims || []).filter(isProven).length + " proven claims.")], { versions:s.versions, counts:s.counts });
+    const last = vs[vs.length - 1];
+    return resultBox("ok", vs.length + " version(s) on record; latest is v" + last.version, [h("p", "rnote", "Latest commit " + str(last.commit || "–") + " · status " + str(last.status) + " · " + str(last.reason))], { versions:s.versions });
+  },
+  async gate() {
+    const r = await getReceipt(), checks = (r.check && r.check.checks) || [], g = checks.find(c => /gate/i.test(c.name));
+    const vs = versions(r.receipt && Array.isArray(r.receipt.versions) ? { versions:r.receipt.versions } : State.snap);
+    const nodes = [g ? checkRow(g) : h("p", "rnote", "No gate check in the response.")];
+    if (!vs.length) nodes.push(h("p", "rnote", "Note: no versions exist yet, so the rule holds trivially. It becomes meaningful once version 1 is scored."));
+    return resultBox(g && g.ok ? (vs.length ? "ok" : "warn") : "bad", g && g.ok ? "Gate rule held" + (vs.length ? "" : " (nothing scored yet)") : "Gate rule broken", nodes, r);
+  },
+  async hunt() {
+    const txt = $("#huntIn") ? $("#huntIn").value : "GET /healthz";
+    const req = parseRequest(txt); if (!req) return resultBox("bad", "Could not read that request", [h("p", "rnote", "Write it as METHOD /path, optionally followed by a JSON body, e.g. GET /sku/AX-200")]);
+    const r = await B.challenge(req);
+    const nodes = [diffPanes("Old program", r.original, "New program v" + str(r.version), r.port)];
+    if (r.subq_genuine != null) nodes.push(h("p", "rnote", "SubQ second opinion: " + Math.round(+r.subq_genuine * 100) + "% likely a real behaviour change."));
+    if (r.diverged) nodes.push(h("p", "rnote", r.new ? "This is a new difference (" + str(r.divergence_id) + "). A bounty settles in FET on the Fetch testnet." : "Already known as " + str(r.divergence_id) + "."));
+    refresh(); pullTrust();
+    return resultBox(r.diverged ? "bad" : "ok", r.diverged ? "Different answers — you broke the port" : "Identical answers — the port held", nodes, r);
+  },
+  async improve() {
+    const s = await api("/snapshot", {}, 15000); State.snap = s; const vs = versions(s), byV = Object.fromEntries(vs.map(v => [v.version, v]));
+    if (!vs.length) return resultBox("warn", "Nothing to recompute yet", [h("p", "rnote", "The live record has 0 versions.")], { versions:s.versions });
+    let allOk = true;
+    const rows = vs.map(v => { const par = byV[v.parent], regs = (v.regressions || []).length, higher = !par || vScore(v) > vScore(par), should = higher && regs === 0;
+      const did = isAdopted(v) || /SUPERSEDED/i.test(str(v.status)) ? true : isBlocked(v) ? false : null, ok = did === null ? null : did === should; if (ok === false) allOk = false;
+      return checkRow({ name:"v" + v.version + (isSeeded(v) ? " (seeded)" : "") + ": " + (should ? "rule says adopt" : "rule says block"), ok, detail:"score " + pct(vScore(v)) + (par ? " vs parent v" + par.version + " " + pct(vScore(par)) : " (first version)") + ", " + regs + " regressions · server decided " + str(v.status) }); });
+    return resultBox(allOk ? "ok" : "bad", allOk ? "Every decision follows the rule" : "A decision broke the rule", rows, { versions:s.versions });
+  },
+  async receipt() {
+    const r = await getReceipt(), checks = (r.check && r.check.checks) || [];
+    const idp = h("p", "rnote"); idp.append("Receipt id: ", monoEl(str(r.receipt && r.receipt.id)));
+    renderData();
+    return resultBox(r.check && r.check.ok ? "ok" : "bad", r.check && r.check.ok ? "All checks passed" : (checks.filter(c => !c.ok).length + " of " + checks.length + " checks failed"), [...checks.map(checkRow), idp], r);
+  },
+};
+function parseRequest(t) {
+  t = str(t).trim(); if (!t) return null;
+  if (t.startsWith("{")) { try { const j = JSON.parse(t); if (j.request) return j.request; if (j.method && j.path) return { headers:{}, body:null, ...j }; } catch { return null; } return null; }
+  const m = t.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(\/\S*)\s*([\s\S]*)$/i); if (!m) return null;
+  let body = null; if (m[3].trim()) { try { body = JSON.parse(m[3]); } catch { return null; } }
+  return { method:m[1].toUpperCase(), path:m[2], headers:body ? { "Content-Type":"application/json" } : {}, body };
+}
+
+/* ---------- main panel ---------- */
+let renderedKey = "";
+function renderPanel(animate) {
+  const i = State.step, st = STEPS[i], s = State.snap || {}, p = $("#panel");
+  p.replaceChildren(); p.classList.remove("enter"); if (animate) { void p.offsetWidth; p.classList.add("enter"); }
+  const hd = h("div"); hd.append(h("div", "eyebrow", "Step " + (i + 1) + " of 7 · " + st.short), h("h1", null, st.head)); p.append(hd);
+  p.append(h("p", "lead", st.what));
+  const fl = h("div", "flow" + (animate ? " play" : "")); fl.setAttribute("role", "img"); fl.setAttribute("aria-label", st.flow.map(n => n.t).join(" then "));
+  st.flow.forEach((n, k) => { if (k) { const a = h("div", "arr"); a.style.setProperty("--i", k); a.append(arrowSvg()); fl.append(a); } const d = h("div", "node k-" + n.k); d.style.setProperty("--i", k); d.append(h("b", null, n.t), h("span", null, n.s)); fl.append(d); });
+  p.append(fl);
+  const data = h("div"); data.id = "stepData"; data.style.cssText = "display:flex;flex-direction:column;gap:16px"; stepData(st.key, s).forEach(n => data.append(n)); p.append(data);
+  renderedKey = dataKey();
+  // verify
+  const v = h("section", "card verify"), vh = h("h3", null, "Verify it yourself"); v.append(vh);
+  if (st.key === "hunt") {
+    const box = h("div", "hunt-in"); const ta = h("textarea"); ta.id = "huntIn"; ta.value = Results.huntText || "GET /healthz"; ta.setAttribute("aria-label", "Request to send to both programs"); ta.addEventListener("input", () => Results.huntText = ta.value);
+    const pr = h("div", "presets"); ["GET /healthz", "GET /sku/AX-200", "GET /sku/NOPE", 'POST /rate {"amount_cents":50,"from":"JPY","to":"USD"}'].forEach(x => { const b = h("button", "chipbtn", x.length > 34 ? x.slice(0, 32) + "…" : x); b.type = "button"; b.title = x; b.addEventListener("click", () => { ta.value = x; Results.huntText = x; }); pr.append(b); });
+    box.append(ta, pr); v.append(box);
+  }
+  const row = h("div", "vrow"); row.style.marginTop = st.key === "hunt" ? "14px" : "0";
+  row.append(h("p", "sub", st.vtext));
+  const btn = h("button", "btn primary"); btn.type = "button"; btn.id = "verifyBtn";
+  const label = st.key === "dig" ? "Re-ask the old program" : st.key === "hunt" ? "Send to both programs" : "Verify it yourself";
+  if (!MODE.live) { btn.disabled = true; btn.textContent = "Live check unavailable offline"; } else btn.textContent = label;
+  btn.addEventListener("click", async () => {
+    stopWalk(); if (!MODE.live) return;
+    btn.disabled = true; btn.replaceChildren(h("span", "spin"), document.createTextNode(/seal|gate|receipt/.test(st.key) ? "Checking the chain… up to a minute" : "Checking live…"));
+    let node; try { node = await VERIFY[st.key](); } catch (e) { node = errorBox(e); }
+    Results[st.key] = node; if (State.step === i) { const slot = $("#resultSlot"); slot.replaceChildren(node); }
+    btn.disabled = false; btn.textContent = label; renderStepper();
+  });
+  row.append(btn); v.append(row);
+  const slot = h("div"); slot.id = "resultSlot"; if (Results[st.key]) slot.append(Results[st.key]); v.append(slot);
+  p.append(v);
+  // nav
+  const nav = h("nav", "stepnav"), back = h("button", "btn", "← Back"), next = h("button", "btn primary", i === 6 ? "Start over" : "Next step →");
+  back.type = next.type = "button"; back.disabled = i === 0; if (i === 0) back.style.visibility = "hidden";
+  back.addEventListener("click", () => { stopWalk(); go(i - 1); }); next.addEventListener("click", () => { stopWalk(); go(i === 6 ? 0 : i + 1); });
+  nav.append(back, h("span", "hint", "Tip: use the ← → arrow keys"), next); p.append(nav);
+}
+function dataKey() { const s = State.snap || {}; return JSON.stringify([MODE.live, (s.claims || []).length, (s.claims || []).filter(isProven).length, s.versions, (s.divergences || []).length, (s.payments || []).length, s.counts, State.trust && [State.trust.bounty_fet, State.trust.unbroken_minutes], Results.receiptId]); }
+function renderData() { const d = $("#stepData"); if (!d) return; d.replaceChildren(); stepData(STEPS[State.step].key, State.snap || {}).forEach(n => d.append(n)); renderedKey = dataKey(); }
+function go(i) { i = Math.max(0, Math.min(6, i)); State.step = i; renderStepper(); renderPanel(true); $("#main").scrollTop = 0; if (innerWidth <= 860) scrollTo({ top:0, behavior:RM ? "auto" : "smooth" }); }
+
+/* walkthrough */
+let walkT = null;
+function stopWalk() { if (walkT) { clearInterval(walkT); walkT = null; $("#walk").textContent = "Walk me through it"; } }
+$("#walk").addEventListener("click", () => { if (walkT) return stopWalk(); $("#walk").textContent = "Pause walkthrough"; go(0); walkT = setInterval(() => { if (State.step >= 6) return stopWalk(); go(State.step + 1); }, 8000); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { openHistory(false); return; }
+  if (view !== "how") return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement && document.activeElement.tagName)) return;
+  if (e.key === "ArrowRight") { stopWalk(); go(State.step + 1); } else if (e.key === "ArrowLeft") { stopWalk(); go(State.step - 1); }
+});
+
+/* ======================= A2UI v0.9 renderer (from lazarus-console.html) ======================= */
+const V = "v0.9", CAT = "lazarus/catalog";
+const surfaces = new Map();
+const getPath = (o, p) => { if (!p || p === "/") return o; return p.split("/").filter(Boolean).reduce((a, k) => a == null ? undefined : a[k], o); };
+function setPath(s, p, v) {
+  if (!p || p === "/") { s.data = v && typeof v === "object" ? v : {}; return; }
+  const ks = p.split("/").filter(Boolean); let o = s.data;
+  ks.slice(0, -1).forEach(k => { if (typeof o[k] !== "object" || o[k] === null) o[k] = {}; o = o[k]; });
+  o[ks[ks.length - 1]] = v;
+}
+const isBind = v => v && typeof v === "object" && !Array.isArray(v) && typeof v.path === "string";
+const TONES = { success:"green", warning:"amber", danger:"red", info:"blue", neutral:null };
+const toneOf = (el, t) => { if (t && Object.prototype.hasOwnProperty.call(TONES, t)) t = TONES[t]; if (t && /^[a-z]+$/.test(t)) el.classList.add("tone-" + t); };
+const safeUrl = u => { try { const x = new URL(str(u)); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } };
+const Catalog = {
+  Card(c, r) { const e = h("div", "a-card"); toneOf(e, c.tone); e.append(r.child(c.child)); return e; },
+  Column(c, r) { const e = h("div", "a-col"); if (c.gap) e.style.gap = Math.min(40, +c.gap || 0) * .6 + "px"; (c.children || []).forEach(id => e.append(r.child(id))); return e; },
+  Row(c, r) { const e = h("div", "a-row" + (c.align === "top" ? " top" : "") + (c.layout === "grid" ? " grid" : c.layout === "split" ? " split" : "")); if (c.justify === "end") e.style.justifyContent = "flex-end"; (c.children || []).forEach(id => e.append(r.child(id))); return e; },
+  Text(c, r) { const vr = ["h1","h2","h3","h4","body","caption","label","mono"].includes(c.variant) ? c.variant : "body"; const e = h("div", "a-text v-" + vr); r.bind(c.text, v => e.textContent = v == null ? "" : String(v)); return e; },
+  Button(c, r) {
+    const e = h("button", "a-btn " + (["primary","danger"].includes(c.variant) ? c.variant : "")); e.type = "button";
+    if (c.child) e.append(r.child(c.child)); r.bind(c.disabled, v => e.disabled = !!v);
+    const name = c.action && c.action.event && c.action.event.name, open = c.action && safeUrl(c.action.open);
+    if (c.label && !c.child) e.textContent = str(c.label);
+    e.addEventListener("click", () => { if (e.disabled) return; if (open) { window.open(open, "_blank", "noopener"); return; } if (name) clientEvent(r.surface, c, e); });
+    return e;
+  },
+  Metric(c, r) {
+    const e = h("div", "a-metric"); toneOf(e, c.tone); const val = h("div", "val"), num = h("span"), unit = h("small", null, c.unit || ""); val.append(num, unit); e.append(val, h("div", "ml", c.label || ""));
+    r.bind(c.value, v => { num.textContent = typeof v !== "number" ? (v == null ? "–" : String(v)) : c.format === "pct" ? pct(v) : Math.round(v).toLocaleString(); });
+    return e;
+  },
+  Progress(c, r) {
+    const e = h("div", "a-prog"); toneOf(e, c.tone); const top = h("div", "pt"), v = h("span"), bar = h("div", "bar"), fill = h("i");
+    top.append(h("span", null, c.label || ""), v); bar.append(fill); e.append(top, bar);
+    r.bind(c.value, x => { const n = Math.max(0, Math.min(1, +x || 0)); fill.style.width = (n * 100) + "%"; v.textContent = Math.round(n * 100) + "%"; });
+    return e;
+  },
+  Badge(c, r) { const e = h("span", "a-badge"); toneOf(e, c.tone); r.bind(c.text, v => e.textContent = String(v ?? "")); return e; },
+  Divider() { return h("hr", "a-div"); },
+  CodeBlock(c, r) { const e = h("div", "a-code"); if (c.label) e.append(h("div", "cl", c.label)); const pre = h("pre"); e.append(pre); r.bind(c.code, v => pre.textContent = typeof v === "string" ? v : JSON.stringify(v, null, 2)); return e; },
+  Diff(c, r) {
+    const e = h("div", "a-diff"); const marks = Array.isArray(c.mark) ? c.mark.map(String) : [];
+    const pane0 = (x, lab) => x == null ? null : typeof x === "object" && !Array.isArray(x) && "code" in x ? x : { title:lab, code:typeof x === "string" ? x : JSON.stringify(x, null, 2) };
+    const L = c.original || pane0(c.left, c.leftLabel || "original"), Rt = c.port || pane0(c.right, c.rightLabel || "port");
+    [["l", L], ["r", Rt]].forEach(([side, p]) => {
+      p = p || {}; const pane = h("div", "pane " + side), dh = h("div", "dh"), pre = h("pre");
+      dh.append(h("b", null, p.title || (side === "l" ? "original" : "port")), h("span", null, p.tag || ""));
+      String(p.code || "").split("\n").forEach(line => { const d = h("div", null, line || " "); if (marks.some(m => line.includes('"' + m + '"'))) d.className = "hit"; pre.append(d); });
+      pane.append(dh, pre); e.append(pane);
+    });
+    return e;
+  },
+  Timeline(c, r) {
+    const e = h("ul", "a-tl");
+    r.bind(c.items, items => { e.replaceChildren(); (Array.isArray(items) ? items : []).forEach(it => {
+      it = it || {}; const li = h("li", it.struck ? "struck" : ""); toneOf(li, it.tone);
+      const mid = h("div"); mid.append(h("div", "tt", it.title || ""), h("div", "tm", it.meta || ""));
+      const right = h("div"); if (it.tag) { const b = h("span", "a-badge", it.tag); toneOf(b, it.tone); right.append(b); }
+      li.append(h("span", "pip"), mid, right); e.append(li); }); });
+    return e;
+  },
+  ScoreRing(c, r) {
+    const e = h("div", "a-ring"); toneOf(e, c.tone); const NS = "http://www.w3.org/2000/svg", R = 34, L = 2 * Math.PI * R, S = 84;
+    const svg = document.createElementNS(NS, "svg"); svg.setAttribute("width", S); svg.setAttribute("height", S); svg.setAttribute("viewBox", `0 0 ${S} ${S}`);
+    const mk = (cls, extra) => { const ci = document.createElementNS(NS, "circle"); ci.setAttribute("class", cls); ci.setAttribute("cx", S / 2); ci.setAttribute("cy", S / 2); ci.setAttribute("r", R); ci.setAttribute("fill", "none"); ci.setAttribute("stroke-width", 4); Object.entries(extra || {}).forEach(([k, v]) => ci.setAttribute(k, v)); return ci; };
+    const arc = mk("arc", { "stroke-dasharray":L, "stroke-dashoffset":L, transform:`rotate(-90 ${S/2} ${S/2})` });
+    const txt = document.createElementNS(NS, "text"); txt.setAttribute("class", "pct"); txt.setAttribute("x", S / 2); txt.setAttribute("y", S / 2 + 5); txt.setAttribute("text-anchor", "middle");
+    const sub = document.createElementNS(NS, "text"); sub.setAttribute("class", "sub"); sub.setAttribute("x", S / 2); sub.setAttribute("y", S / 2 + 19); sub.setAttribute("text-anchor", "middle"); sub.textContent = c.sub || "";
+    svg.append(mk("trk"), arc, txt, sub); e.append(svg); if (c.label) e.append(h("div", "rl", c.label));
+    r.bind(c.value, v => { const n = Math.max(0, Math.min(1, +v || 0)); arc.setAttribute("stroke-dashoffset", L * (1 - n)); txt.textContent = pct(n); });
+    return e;
+  },
+};
+function unknownComponent(c) {
+  const e = h("div", "a-unknown");
+  e.append(h("b", null, `Unknown component "${String(c.component).slice(0, 40)}"`), h("div", "v-caption", `Not in ${CAT}. Nothing ran; props shown as inert text.`));
+  const props = Object.assign({}, c); delete props.id; delete props.component; e.append(h("code", null, JSON.stringify(props).slice(0, 220)));
+  return e;
+}
+function build(s, id, seen) {
+  const c = s.comps.get(id);
+  if (!c) return unknownComponent({ component:"(missing ref: " + id + ")" });
+  if (seen.has(id) || seen.size > 64) return unknownComponent({ component:"(cycle at " + id + ")" });
+  const next = new Set(seen).add(id);
+  const r = { surface:s, child:cid => build(s, cid, next), bind:(v, apply) => { if (isBind(v)) { s.binders.push({ path:v.path, apply }); apply(getPath(s.data, v.path)); } else apply(v); } };
+  const fn = Object.prototype.hasOwnProperty.call(Catalog, c.component) ? Catalog[c.component] : null;
+  return fn ? fn(c, r) : unknownComponent(c);
+}
+function render(s) { s.binders = []; s.body.replaceChildren(s.comps.has("root") ? build(s, "root", new Set()) : h("div", "v-caption", "…")); }
+function processMessage(m, host) {
+  if (!m || typeof m !== "object" || (m.version !== V && m.version !== "0.9")) return;
+  if (m.createSurface) {
+    const { surfaceId, catalogId } = m.createSurface; if (!surfaceId || (catalogId && catalogId !== CAT && !/lazarus/.test(catalogId))) return;
+    if (surfaces.has(surfaceId)) surfaces.delete(surfaceId);
+    const body = h("div", "surface"); host.append(body);
+    surfaces.set(surfaceId, { id:surfaceId, comps:new Map(), data:{}, binders:[], body });
+  } else if (m.updateComponents) {
+    const s = surfaces.get(m.updateComponents.surfaceId); if (!s) return;
+    (m.updateComponents.components || []).forEach(c => c && c.id && s.comps.set(c.id, c)); render(s);
+  } else if (m.updateDataModel) {
+    const s = surfaces.get(m.updateDataModel.surfaceId); if (!s) return; const p = m.updateDataModel.path || "/";
+    setPath(s, p, m.updateDataModel.value);
+    s.binders.forEach(b => { if (p === "/" || b.path === p || b.path.startsWith(p + "/") || p.startsWith(b.path + "/")) b.apply(getPath(s.data, b.path)); });
+  } else if (m.deleteSurface) {
+    const s = surfaces.get(m.deleteSurface.surfaceId); if (!s) return; surfaces.delete(s.id); s.body.remove();
+  }
+}
+let sidN = 0; const nsid = p => p + "-" + (++sidN) + "-" + Date.now().toString(36);
+const cs = sid => ({ version:V, createSurface:{ surfaceId:sid, catalogId:CAT } });
+const uc = (sid, comps) => ({ version:V, updateComponents:{ surfaceId:sid, components:comps.flat() } });
+const ud = (sid, path, value) => ({ version:V, updateDataModel:{ surfaceId:sid, path, value } });
+const C = {
+  card:(id, child, tone) => ({ id, component:"Card", child, ...(tone ? { tone } : {}) }),
+  col:(id, children, gap) => ({ id, component:"Column", children, ...(gap ? { gap } : {}) }),
+  row:(id, children, extra) => ({ id, component:"Row", children, ...(extra || {}) }),
+  text:(id, text, variant = "body") => ({ id, component:"Text", text, variant }),
+  badge:(id, text, tone) => ({ id, component:"Badge", text, ...(tone ? { tone } : {}) }),
+  metric:(id, label, value, extra) => ({ id, component:"Metric", label, value, ...(extra || {}) }),
+  prog:(id, label, value, tone) => ({ id, component:"Progress", label, value, ...(tone ? { tone } : {}) }),
+  div:id => ({ id, component:"Divider" }),
+  code:(id, label, code) => ({ id, component:"CodeBlock", label, code }),
+  tl:(id, items) => ({ id, component:"Timeline", items }),
+  btn:(id, label, name, context, variant) => [{ id, component:"Button", child:id + "-l", action:{ event:{ name, context } }, ...(variant ? { variant } : {}) }, { id:id + "-l", component:"Text", text:label }],
+};
+
+/* ======================= chat ======================= */
+const MODELS = [["asi1", "ASI:One"], ["muse-spark", "Muse Spark"], ["muse-code", "Muse Code"], ["subq", "SubQ"]];
+const USED = { "asi1":"ASI:One", "asi:one":"ASI:One", "asi-one":"ASI:One", "muse-spark":"Muse Spark", "muse-code":"Muse Code", "muse":"Meta Muse", "subq":"SubQ", "mongodb":"MongoDB Atlas", "atlas":"MongoDB Atlas", "agentverse":"Agentverse", "uagents":"uAgents" };
+const usedLabel = u => USED[str(u).toLowerCase()] || str(u).slice(0, 24);
+const modelChips = {};
+MODELS.forEach(([k, l]) => { const c = h("span", "chip", l); modelChips[l] = c; $("#models").append(c); });
+function lightModels(used) { const set = new Set((used || []).map(usedLabel)); Object.entries(modelChips).forEach(([l, c]) => c.classList.toggle("on", set.has(l))); }
+const msgs = $("#msgs");
+function stick() { requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; }); }
+function addMsg(role, text, o = {}) {
+  const el = h("article", "msg " + role), mh = h("div", "mh");
+  mh.append(h("span", "who", role === "user" ? "You" : "LAZARUS"));
+  if (o.sample) mh.append(h("span", "tag sample", "sample"));
+  if (o.error) mh.append(h("span", "tag bad", "error"));
+  mh.append(h("span", "t", hhmmss(o.at || Date.now())));
+  el.append(mh);
+  const body = h("div", "body"); if (text) body.textContent = text; else body.hidden = true; el.append(body);
+  const surf = h("div", "surf"); el.append(surf);
+  (Array.isArray(o.a2ui) ? o.a2ui : []).forEach(m => { try { processMessage(m, surf); } catch { surf.append(unknownComponent({ component:"(bad message)" })); } });
+  if (role !== "user") setReceipts(el, o);
+  msgs.append(el); stick(); return { el, body, surf };
+}
+function setReceipts(el, o) {
+  let rc = el.querySelector(".receipts"); if (rc) rc.remove();
+  const used = Array.isArray(o.used) ? o.used : [], agents = Array.isArray(o.agents) ? o.agents : [];
+  if (!used.length && !agents.length && !o.sample) return;
+  rc = h("div", "receipts"); rc.append(h("span", "lab", "Answered by"));
+  used.forEach(u => rc.append(h("span", "chip on", usedLabel(u))));
+  if (o.sample && !used.length) rc.append(h("span", "chip sm", "no model called"));
+  agents.forEach(a => rc.append(h("span", "chip ag", "@" + str(a).slice(0, 16))));
+  el.append(rc);
+}
+function thinking() { const el = h("article", "msg"), t = h("div", "thinking", "Agents working"); el.append(t); msgs.append(el); stick(); return el; }
+function session() { if (!State.session) { State.session = store.get("lazarus.session") || uid(); store.set("lazarus.session", State.session); } return State.session; }
+let busy = false;
+async function sendChat(text) {
+  text = str(text).trim(); if (!text || busy) return;
+  busy = true; $("#sendBtn").disabled = true;
+  const at = new Date().toISOString(); addMsg("user", text, { at }); const wait = thinking();
+  try {
+    const res = MODE.live ? await post("/chat", { session_id:session(), message:text }, 120000) : await sampleChat(text);
+    wait.remove();
+    if (res.session_id && res.session_id !== State.session) { State.session = res.session_id; store.set("lazarus.session", res.session_id); }
+    addMsg("assistant", str(res.reply), { a2ui:res.a2ui, used:res.used, agents:res.agents, sample:!MODE.live });
+    lightModels(res.used);
+    if (!MODE.live) { Sample.addTurn(session(), { role:"user", text, at }); Sample.addTurn(session(), { role:"assistant", text:str(res.reply), a2ui:res.a2ui, used:res.used, agents:res.agents, at:new Date().toISOString() }); }
+    else refresh();
+  } catch (e) { wait.remove(); addMsg("assistant", "The API did not answer: " + str(e.message || e) + ". Nothing was sent to any agent.", { error:true }); }
+  finally { busy = false; $("#sendBtn").disabled = false; }
+}
+function diffSurface(r) {
+  const sid = nsid("challenge"), keys = new Set(), ob = (r.original && r.original.body) || {}, pb = (r.port && r.port.body) || {};
+  if (typeof ob === "object" && typeof pb === "object") Object.keys({ ...ob, ...pb }).forEach(k => { if (JSON.stringify(ob[k]) !== JSON.stringify(pb[k])) keys.add(k); });
+  const fmt = x => JSON.stringify({ status:x && x.status, body:x && x.body }, null, 2), req = r.input || {};
+  return [cs(sid), uc(sid, [
+    C.card("root", "c", r.diverged ? "red" : "green"), C.col("c", ["hd", "df", "ft"], 12),
+    C.row("hd", ["t", "b"], { layout:"split" }), C.text("t", `${str(req.method)} ${str(req.path)} against port v${str(r.version)}`, "h4"),
+    C.badge("b", r.diverged ? "diverged " + str(r.divergence_id || "") : "identical", r.diverged ? "red" : "green"),
+    { id:"df", component:"Diff", original:{ title:"old program", code:fmt(r.original) }, port:{ title:"new program", tag:"v" + str(r.version), code:fmt(r.port) }, mark:[...keys] },
+    C.text("ft", r.diverged ? "Sample difference. Offline: no stake and no bounty were paid." : "Same answer on this input.", "caption"),
+  ])];
+}
+async function sampleChat(text) {
+  await sleep(500);
+  const t = text.toLowerCase(), snap = Sample.snapshot(), cur = currentVersion(snap);
+  if (/challenge|^(get|post|put|delete|patch)\s+\//i.test(text)) {
+    const m = text.match(/\b(GET|POST|PUT|DELETE|PATCH)\s+(\/\S*)/i), r = Sample.challenge(m ? { method:m[1].toUpperCase(), path:m[2], headers:{}, body:null } : { method:"GET", path:"/healthz" });
+    return { reply:r.diverged ? `Sample difference on port v${r.version}.` : "No difference. Both programs gave the same answer.", a2ui:diffSurface(r), used:[], agents:["scout", "oracle"] };
+  }
+  if (/claim|ledger|proven/.test(t)) {
+    const L = snap.claims, sid = nsid("claims");
+    return { reply:`${L.length} sample claims, each traced to a probe or a log line.`, used:[], agents:["digger"], a2ui:[cs(sid), uc(sid, [C.card("root", "c"), C.tl("c", { path:"/items" })]),
+      ud(sid, "/items", L.slice(0, 8).map(c => { const s = cstat(c.status); return { title:c.claim, meta:`${c.id} · ${c.endpoint}`, tag:s, tone:s === "proven" ? "green" : s === "refuted" ? "red" : "amber", struck:s === "refuted" }; }))] };
+  }
+  if (/what is|about|explain|lazarus/.test(t)) return { reply:"LAZARUS rebuilds a program whose source code is lost, using only the running binary. Fetch.ai agents probe it, Meta Muse Code writes a new version, and an independent Oracle scores it on 200 hidden tests sealed on-chain before work began.", used:[], agents:["scribe"], a2ui:[] };
+  const sid = nsid("status");
+  return { reply:`Sample status: port v${cur.version} is adopted at ${pct(vScore(cur))} on the sealed gate. Offline, no model is called.`, used:[], agents:["oracle"], a2ui:[cs(sid), uc(sid, [
+    C.card("root", "c", "green"), C.row("c", ["m1", "m2", "m3"], { layout:"grid" }),
+    C.metric("m1", "sealed score (sample)", vScore(cur), { format:"pct", tone:"green" }), C.metric("m2", "probes (sample)", snap.counts.probes), C.metric("m3", "versions (sample)", snap.versions.length)])] };
+}
+function clientEvent(s, c, btn) {
+  const ev = c.action.event, ctx = ev.context || {};
+  if (ev.name === "build" && ctx.file_id) { btn.disabled = true; runBuild(str(ctx.file_id), btn); return; }
+  if (ev.name === "verify_receipt") { go(6); return; }
+  sendChat(ev.name + (Object.keys(ctx).length ? " " + JSON.stringify(ctx) : ""));
+}
+async function uploadFile(file) {
+  if (!file || busy) return; busy = true;
+  addMsg("user", "Uploaded " + file.name + " (" + file.size.toLocaleString() + " bytes)"); const wait = thinking();
+  try {
+    const r = await B.files(file); wait.remove();
+    const claims = Array.isArray(r.claims) ? r.claims : [], sid = nsid("file");
+    const a2ui = Array.isArray(r.a2ui) && r.a2ui.length ? r.a2ui : [cs(sid), uc(sid, [
+      C.card("root", "c", "blue"), C.col("c", ["hd", "tl", "act"], 10),
+      C.row("hd", ["t", "b"], { layout:"split" }), C.text("t", str(r.name || file.name), "h4"), C.badge("b", claims.length + " claims", "blue"),
+      C.tl("tl", claims.slice(0, 30).map(c => ({ title:str(c.claim), meta:str(c.endpoint) + (c.confidence != null ? " · confidence " + (+c.confidence).toFixed(2) : ""), tag:+c.confidence >= .8 ? "likely" : "guess", tone:+c.confidence >= .8 ? "green" : "amber" }))),
+      C.row("act", ["go", "cap"]), C.btn("go", "Build from this file", "build", { file_id:str(r.file_id) }, "primary"),
+      C.text("cap", MODE.live ? "Muse Code writes a port; Sentinel checks it before anything runs." : "Sample: offline build, no model is called.", "caption"),
+    ])];
+    addMsg("assistant", "Claims extracted from the file.", { a2ui, used:r.used, agents:["digger"], sample:!MODE.live }); lightModels(r.used);
+  } catch (e) { wait.remove(); addMsg("assistant", "Upload failed: " + str(e.message || e), { error:true }); }
+  finally { busy = false; }
+}
+async function runBuild(fileId, btn) {
+  const sid = nsid("build"), m = addMsg("assistant", "Building a port from " + fileId + ".", { sample:!MODE.live, agents:["prober", "sentinel"] });
+  processMessage(cs(sid), m.surf);
+  processMessage(uc(sid, [C.card("root", "c"), C.col("c", ["r", "p"], 8), C.row("r", ["t", "b"], { layout:"split" }), C.text("t", "Muse Code is writing the port", "h4"), C.badge("b", { path:"/status" }, "blue"), C.prog("p", "build", { path:"/p" }, "blue")]), m.surf);
+  processMessage(ud(sid, "/", { status:"running", p:.05 }), m.surf);
+  try {
+    const { build_id } = await B.build(fileId); let st, k = .05, n = 0;
+    while (true) { await sleep(1500); st = await B.buildStatus(build_id); n++; if (st.status !== "running" || n > 160) break; k = Math.min(.92, k + .08); processMessage(ud(sid, "/", { status:"running", p:k }), m.surf); }
+    if (st.status !== "done") { processMessage(ud(sid, "/", { status:str(st.status || "timeout"), p:1 }), m.surf); m.body.textContent = "Build " + str(st.status || "timed out") + (st.error ? ": " + str(st.error) : "."); m.body.hidden = false; if (btn) btn.disabled = false; return; }
+    const files = Array.isArray(st.files) ? st.files : [], sn = st.sentinel || {}, finds = Array.isArray(sn.findings) ? sn.findings : [];
+    processMessage(uc(sid, [
+      C.card("root", "c", sn.passed ? "green" : "red"), C.col("c", ["r", "tree", "pv", "sv"], 10),
+      C.row("r", ["t", "b"], { layout:"split" }), C.text("t", `Port built · ${files.length} files`, "h4"), C.badge("b", sn.passed ? "sentinel passed" : "sentinel blocked", sn.passed ? "green" : "red"),
+      C.code("tree", "file tree", files.map(f => str(f.path).padEnd(30) + " " + str(f.bytes) + " B").join("\n") || "(no files)"),
+      C.code("pv", "preview · " + str(files[0] && files[0].path), str(st.preview).slice(0, 6000)),
+      finds.length ? C.tl("sv", finds.map(f => ({ title:str(f.detail), meta:str(f.rule) + " · line " + str(f.line), tag:"finding", tone:"red" }))) : C.text("sv", "Sentinel: 0 findings. Static check, no model involved.", "caption"),
+    ]), m.surf);
+    m.body.textContent = "Build done."; m.body.hidden = false; setReceipts(m.el, { used:st.used, agents:["prober", "sentinel"], sample:!MODE.live }); lightModels(st.used);
+  } catch (e) { m.body.textContent = "Build failed: " + str(e.message || e); m.body.hidden = false; if (btn) btn.disabled = false; }
+}
+const chat = $("#chat");
+async function openHistory(on) {
+  chat.classList.toggle("show-hist", on); $("#histBtn").setAttribute("aria-expanded", on); if (!on) return;
+  const list = $("#sessList"); list.replaceChildren(h("div", "empty", "Loading…"));
+  try {
+    const ss = await B.sessions(); list.replaceChildren();
+    $("#histMeta").textContent = (MODE.live ? "" : "sample · this browser · ") + ss.length + " sessions";
+    if (!ss.length) list.append(h("div", "empty", "No past sessions yet."));
+    ss.forEach(s => { const b = h("button", "sess" + (s.session_id === session() ? " cur" : "")); b.type = "button";
+      b.append(h("b", null, s.title || s.session_id), h("span", null, str(s.turns) + " turns · " + (s.updated_at ? new Date(s.updated_at).toLocaleString() : "")));
+      b.addEventListener("click", () => loadSession(s.session_id)); list.append(b); });
+  } catch (e) { list.replaceChildren(h("div", "empty", "Could not load sessions: " + str(e.message))); }
+}
+async function loadSession(sid) {
+  try {
+    const turns = await B.history(sid); State.session = sid; store.set("lazarus.session", sid);
+    msgs.replaceChildren(); surfaces.clear();
+    (Array.isArray(turns) ? turns : []).forEach(t => addMsg(t.role === "user" ? "user" : "assistant", str(t.text), { a2ui:t.a2ui, used:t.used, agents:t.agents, at:t.at, sample:!MODE.live && t.role !== "user" }));
+    openHistory(false);
+  } catch (e) { addMsg("assistant", "Could not load that session: " + str(e.message), { error:true }); }
+}
+function welcome() {
+  addMsg("assistant", MODE.live
+    ? "Connected to the live LAZARUS API. Ask anything about the rebuild, try “challenge GET /healthz”, or upload a file with + to extract claims."
+    : "The API at " + BASE.replace(/^https?:\/\//, "") + " is not answering, so answers here are labelled sample data and no model is called. The seal hashes are the real ones.",
+    { sample:!MODE.live });
+}
+["What is LAZARUS?", "status", "show the claims", "challenge GET /healthz", "trust price"].forEach(s => { const b = h("button", null, s); b.type = "button"; b.addEventListener("click", () => sendChat(s)); $("#sugg").append(b); });
+$("#composer").addEventListener("submit", e => { e.preventDefault(); const i = $("#input"); const v = i.value; i.value = ""; sendChat(v); });
+$("#clip").addEventListener("click", () => $("#file").click());
+$("#file").addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; uploadFile(f); });
+let dragN = 0;
+chat.addEventListener("dragenter", e => { if (e.dataTransfer && [...e.dataTransfer.types].includes("Files")) { e.preventDefault(); dragN++; chat.classList.add("dragging"); } });
+chat.addEventListener("dragover", e => { if (chat.classList.contains("dragging")) e.preventDefault(); });
+chat.addEventListener("dragleave", () => { if (--dragN <= 0) { dragN = 0; chat.classList.remove("dragging"); } });
+chat.addEventListener("drop", e => { e.preventDefault(); dragN = 0; chat.classList.remove("dragging"); uploadFile(e.dataTransfer.files && e.dataTransfer.files[0]); });
+$("#histBtn").addEventListener("click", () => openHistory(!chat.classList.contains("show-hist")));
+$("#histX").addEventListener("click", () => openHistory(false));
+$("#newBtn").addEventListener("click", () => { State.session = uid(); store.set("lazarus.session", State.session); msgs.replaceChildren(); surfaces.clear(); lightModels([]); welcome(); });
+/* chat open/close */
+const app = $("#app");
+const sheet = () => innerWidth <= 1200;
+function setChat(open) {
+  if (sheet()) app.classList.toggle("chat-open", open); else { app.classList.toggle("chat-closed", !open); $("#chatToggle").textContent = open ? "Hide chat" : "Show chat"; $("#chatToggle").setAttribute("aria-expanded", open); }
+  if (open && sheet()) setTimeout(() => $("#input").focus(), 50);
+}
+$("#chatToggle").addEventListener("click", () => setChat(app.classList.contains("chat-closed")));
+$("#chatX").addEventListener("click", () => setChat(false));
+$("#fab").addEventListener("click", () => setChat(true));
+
+/* ======================= Real-world demos ======================= */
+const DEMOS = {
+  banking:{ label:"Banking", head:"Rebuild a live bank-account (IBAN) validation service we don't own",
+    problem:"Banks depend on services they did not write and cannot see inside. LAZARUS rebuilds one from its answers alone (here the public IBAN validator at openiban.com) and proves the copy gives the same answers.",
+    who:"Banks replacing legacy core systems." },
+  acquisition:{ label:"Acquisition", head:"Inherited service: no source, no team",
+    problem:"After an acquisition you often inherit a running service with no source code and nobody left who knows how it works. LAZARUS works out what it actually does and tells you whether it is safe to retire.",
+    who:"Buyers inheriting undocumented services." },
+  audit:{ label:"Audit & compliance", head:"Evidence an auditor can check without trusting us",
+    problem:"Auditors must sign off on what a system does, using evidence nobody could have edited afterwards. LAZARUS bundles the evidence, drafts the memo, and anchors its fingerprint on the Fetch testnet.",
+    who:"Regulators and auditors who need proof." },
+};
+const STEP_TITLES = { seal:"Seal the hidden tests", dig:"Dig: probe the live service", port:"Port: write the new code", scan:"Scan: safety check before it runs", gate:"Gate: score on the hidden tests", improve:"Improve: hunt for remaining differences",
+  inventory:"Inventory: what the binary really does", brief:"Handover brief", decision:"Retire decision", bundle:"Evidence bundle", memo:"Audit memo", signoff:"Sign-off opinion", anchor:"Anchor on the Fetch testnet", verify:"Read back from the chain" };
+const Demo = { mod:null, runId:null, poll:null, token:0, rendered:[], active:{} };
+let view = "how";
+const okStat = s => /^(done|passed|adopted|ok|verified)$/i.test(str(s));
+const badStat = s => /fail|block|error|reject/i.test(str(s));
+const tone = s => okStat(s) ? "ok" : badStat(s) ? "bad" : "warn";
+const fmtEpoch = t => { const d = new Date(+t * 1000); return isNaN(d) ? "" : d.toTimeString().slice(0, 8); };
+const dur = (a, b) => { const s = Math.max(0, Math.round(+b - +a)); return isFinite(s) ? (s >= 60 ? Math.floor(s / 60) + " min " + (s % 60) + " s" : s + " s") : ""; };
+const modelLabel = m => { m = str(m); if (/gemini/i.test(m)) return "Gemini · " + m; if (/spark/i.test(m)) return "Muse Spark"; if (/muse.*code|code.*muse/i.test(m)) return "Muse Code"; return m; };
+const show = v => v == null ? "–" : typeof v === "object" ? JSON.stringify(v) : String(v);
+function chip(text, on, title) { const c = h("span", "chip" + (on ? " on" : ""), text); if (title) c.title = title; return c; }
+function mdRender(src) {
+  const box = h("div", "md"); let ul = null;
+  const inline = (el, s) => s.split(/(\*\*[^*]+\*\*|`[^`]+`)/).forEach(part => {
+    if (/^\*\*[^*]+\*\*$/.test(part)) el.append(h("strong", null, part.slice(2, -2)));
+    else if (/^`[^`]+`$/.test(part)) el.append(h("code", null, part.slice(1, -1)));
+    else if (part) el.append(document.createTextNode(part.replace(/\*\*/g, "")));
+  });
+  str(src).split(/\r?\n/).forEach(line => {
+    const t = line.trimEnd(); let m;
+    if (!t.trim() || /^\s*(-{3,}|\*{3,})\s*$/.test(t)) { ul = null; return; }
+    if ((m = t.match(/^(#{1,6})\s+(.*)$/))) { ul = null; const e = h("h" + Math.min(6, m[1].length + 3)); inline(e, m[2]); box.append(e); return; }
+    if ((m = t.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)$/))) { if (!ul) { ul = h("ul"); box.append(ul); } const li = h("li"); inline(li, m[1]); ul.append(li); return; }
+    ul = null; const p = h("p"); inline(p, t.trim()); box.append(p);
+  });
+  if (!box.childNodes.length) box.append(h("p", null, "(empty)"));
+  return box;
+}
+function verdict(cls, title, detail) { const v = h("div", "verdict " + cls), d = h("div"); d.append(h("b", null, title)); if (detail) d.append(h("span", null, detail)); v.append(h("span", "tag " + cls, cls === "ok" ? "PASS" : cls === "bad" ? "FAIL" : "WAIT"), d); return v; }
+function pctBig(label, v, cls) { const d = h("div"); const b = h("div", "big " + (cls || "")); b.append(pct(v)); d.append(b, h("div", "dnote", label)); return d; }
+function sec(t) { return h("div", "dsec", t); }
+
+function stepBody(st) {
+  const b = h("div", "dbody"), n = st.name;
+  if (n === "seal") {
+    const t = safeUrl(st.target); const tl = t ? (() => { const a = h("a", null, t); a.href = t; a.target = "_blank"; a.rel = "noopener"; return a; })() : show(st.target);
+    b.append(kv([["Hidden tests", show(st.held_out)], ["Target service", tl], ["Fingerprint (sha256)", monoEl(show(st.sha256))]]));
+  } else if (n === "dig") {
+    const cl = Array.isArray(st.claims) ? st.claims : [], tr = Array.isArray(st.traces) ? st.traces : [];
+    const m = h("div", "metrics"); m.append(metric("probes sent", show(st.probes)), metric("claims", cl.length), metric("observed", cl.filter(c => /OBSERV/i.test(c.status)).length, "ok"), metric("inferred", cl.filter(c => /INFER/i.test(c.status)).length, "warn")); b.append(m);
+    if (tr.length) { b.append(sec("Probe traces (real requests to the live service)")); const l = h("div");
+      tr.slice(0, 6).forEach(t => { const r = h("div", "trow"), bd = t.body, valid = bd && typeof bd === "object" && "valid" in bd ? bd.valid : undefined;
+        r.append(h("span", "mono", show(t.id)), h("span", "in", typeof t.input === "string" ? t.input : show(t.input)), valid === undefined ? h("span", "mono", show(bd).slice(0, 60)) : h("span", "tag " + (valid ? "ok" : "bad"), "valid: " + valid)); l.append(r); });
+      if (tr.length > 6) l.append(h("div", "dnote", "+ " + (tr.length - 6) + " more traces in the raw data below")); b.append(l); }
+    if (cl.length) { b.append(sec("Claims, each backed by trace ids")); const l = h("div", "list");
+      cl.forEach(c => { const li = h("div", "li"); li.append(h("div", "t", show(c.claim)), h("span", "tag " + (/OBSERV/i.test(c.status) ? "ok" : /REFUT/i.test(c.status) ? "bad" : "warn"), show(c.status)));
+        const ev = Array.isArray(c.evidence) ? c.evidence : []; const m2 = h("div", "m"); m2.append(ev.length ? "evidence " : "no evidence ids"); if (ev.length) m2.append(monoEl(ev.join(", "))); if (c.confidence != null) m2.append(" · confidence " + (+c.confidence).toFixed(2)); li.append(m2); l.append(li); });
+      b.append(l); }
+  } else if (n === "port") {
+    b.append(kv([["Version", "v" + show(st.version)], ["Written by", show(st.model)], ["Lines of code", show(st.lines)]]));
+    if (st.code) { const d = h("details", "codev"); d.append(h("summary", null, "Show the generated code (" + show(st.lines) + " lines)"), h("pre", "code", str(st.code))); b.append(d); }
+  } else if (n === "scan") {
+    const f = Array.isArray(st.findings) ? st.findings : [];
+    b.append(okStat(st.status) ? verdict("ok", "Passed: nothing unsafe found in v" + show(st.version), "Static check of the generated code before it is allowed to run. No model involved.") : verdict("bad", "Blocked: v" + show(st.version) + " will not run", f.length + " finding(s)"));
+    f.forEach(x => b.append(h("div", "dnote", typeof x === "string" ? x : [x.rule, x.detail, x.line != null ? "line " + x.line : ""].filter(Boolean).join(" · ") || show(x))));
+  } else if (n === "gate") {
+    const mt = +st.matched, tt = +st.total, ratio = tt ? mt / tt : +st.score || 0;
+    const big = h("div", "big " + (okStat(st.status) ? "ok" : badStat(st.status) ? "bad" : "")); big.append(show(st.matched) + " / " + show(st.total)); big.append(h("small", null, "hidden tests matched"));
+    const bar = h("div", "bar lg" + (badStat(st.status) ? " bad" : "")), f = h("i"); f.style.width = Math.max(0, Math.min(100, ratio * 100)) + "%"; bar.append(f);
+    const regs = Array.isArray(st.regressions) ? st.regressions.length : +st.regressions || 0;
+    b.append(big, bar, h("div", "dnote", "Score " + pct(st.score ?? ratio) + " · " + regs + " regression" + (regs === 1 ? "" : "s") + (st.parent ? " vs v" + st.parent : " · first version") + " · decision: " + str(st.status).toUpperCase()));
+    const sq = Array.isArray(st.subq) ? st.subq : [];
+    if (sq.length) { b.append(sec("SubQ second opinion on each mismatch")); const l = h("div");
+      sq.forEach(x => { const r = h("div", "trow"); r.append(h("span", "in", typeof x.input === "string" ? x.input : show(x.input)), h("span"),
+        x.subq_genuine != null ? chip("SubQ: " + Math.round(+x.subq_genuine * 100) + "% real difference", true) : chip("SubQ unavailable" + (x.subq_error ? ": " + str(x.subq_error).slice(0, 60) : ""), false)); r.style.gridTemplateColumns = "minmax(0,1fr) 0 auto"; l.append(r); });
+      b.append(l); }
+    const mm = Array.isArray(st.mismatches) ? st.mismatches : [];
+    if (mm.length) { const d = h("details", "codev"); d.append(h("summary", null, "Show the " + mm.length + " mismatching hidden test(s)"), h("pre", "code", JSON.stringify(mm, null, 2))); b.append(d); }
+  } else if (n === "improve") {
+    const m = h("div", "metrics"); m.append(metric("fresh probes", show(st.fresh_probes)), metric("differences found", show(st.differences), +st.differences ? "bad" : "ok")); b.append(m);
+    const ex = Array.isArray(st.examples) ? st.examples : [];
+    ex.slice(0, 4).forEach(x => { b.append(sec("Input " + (typeof x.input === "string" ? x.input : show(x.input))));
+      const g = h("div", "sbs"); [["Live service", x.live], ["New code", x.port]].forEach(([t, v]) => { const p2 = h("div", "pane"), ph2 = h("div", "ph"); ph2.append(h("span", null, t)); p2.append(ph2, h("pre", null, JSON.stringify(v, null, 2))); p2.querySelector("pre").style.padding = "10px 12px"; g.append(p2); }); b.append(g); });
+  } else if (n === "inventory") {
+    const c = st.claims || {}; const m = h("div", "metrics");
+    m.append(metric("probes", show(st.probes)), metric("observed", show(c.OBSERVED), "ok"), metric("inferred", show(c.INFERRED), "warn"), metric("refuted", show(c.REFUTED), +c.REFUTED ? "bad" : null), metric("differences", show(st.divergences)));
+    b.append(m);
+    const vs = Array.isArray(st.versions) ? st.versions : [];
+    if (vs.length) { const w = h("div", "scroll-x"), t = h("table", "vtable"), hr = h("tr"); ["Version", "Score", "Regressions", "Status", "Reason"].forEach(x => hr.append(h("th", null, x))); t.append(hr);
+      vs.forEach(v => { const r = h("tr"); const regs = Array.isArray(v.regressions) ? v.regressions.length : show(v.regressions); r.append(h("td", null, "v" + show(v.version)), h("td", null, pct(v.score)), h("td", null, regs)); const ts = h("td"); ts.append(h("span", "tag " + tone(/ADOPT/i.test(v.status) ? "done" : v.status), show(v.status))); r.append(ts, h("td", null, show(v.reason))); t.append(r); });
+      w.append(t); b.append(w); } else b.append(h("div", "dnote", "No rebuilt versions have been scored yet."));
+  } else if (n === "brief" || n === "memo") {
+    b.append(mdRender(st.markdown));
+  } else if (n === "decision") {
+    b.append(pctBig("SubQ: chance it is safe to retire the original", st.subq_safe_to_retire, +st.subq_safe_to_retire >= .5 ? "ok" : "warn"));
+    b.append(h("div", "dnote", "Best adopted rebuild scored " + (st.best_adopted_score != null ? pct(st.best_adopted_score) : "– (none adopted yet)") + " on the sealed hidden tests."));
+  } else if (n === "bundle") {
+    b.append(kv([["Fingerprint (sha256)", monoEl(show(st.sha256))]]));
+    const inc = Array.isArray(st.includes) ? st.includes : []; if (inc.length) { const c = h("div", "chips"); c.append(h("span", "lab", "Includes")); inc.forEach(x => c.append(chip(show(x)))); b.append(c); }
+  } else if (n === "signoff") {
+    b.append(pctBig("SubQ: how strongly the evidence supports sign-off", st.subq_supports_signoff, +st.subq_supports_signoff >= .5 ? "ok" : "warn"));
+  } else if (n === "anchor") {
+    b.append(kv([["Transaction", st.tx_hash ? monoEl(st.tx_hash) : "–"], ["Memo", monoEl(show(st.memo))], ["Wallet", monoEl(show(st.wallet))]]));
+    const u = safeUrl(st.explorer) || (st.tx_hash ? EXPLORER + encodeURIComponent(st.tx_hash) : null);
+    if (u) { const a = h("a", null, "View the anchor transaction on the Fetch explorer →"); a.href = u; a.target = "_blank"; a.rel = "noopener"; a.style.fontWeight = "600"; b.append(a); }
+  } else if (n === "verify") {
+    const ok = okStat(st.status);
+    b.append(verdict(ok ? "ok" : "bad", ok ? "Read back from the chain" : "Chain read-back failed", show(st.detail)));
+    b.append(kv([["Memo on chain", monoEl(show(st.chain_memo))], ["Block time", show(st.block_time)]]));
+  } else {
+    const pairs = Object.entries(st).filter(([k, v]) => !["name", "status", "at", "error"].includes(k) && (v == null || typeof v !== "object")).map(([k, v]) => [k, show(v)]);
+    if (pairs.length) b.append(kv(pairs));
+  }
+  if (st.note) b.append(h("div", "dnote", str(st.note)));
+  if (st.error) { const e = h("div", "errbox"); e.append(h("b", null, "This step failed: "), document.createTextNode(str(st.error))); b.append(e); }
+  return b;
+}
+function stepCard(st, i) {
+  const c = h("article", "card dstep " + tone(st.status)), hd = h("div", "dhead");
+  const ver = st.version != null && /port|scan|gate/.test(st.name) ? " (v" + st.version + ")" : "";
+  hd.append(h("h3", null, (STEP_TITLES[st.name] || str(st.name)) + ver), h("span", "tag " + tone(st.status), str(st.status || "done").toUpperCase()));
+  if (st.model) hd.append(chip(modelLabel(st.model), true, str(st.model)));
+  hd.append(h("span", "when", fmtEpoch(st.at)));
+  c.append(h("span", "dnum", i + 1), hd, stepBody(st));
+  const d = h("details", "raw"); d.append(h("summary", null, "Show raw step data"), h("pre", "code", JSON.stringify(st, null, 2))); c.append(d);
+  return c;
+}
+function runChips(run) {
+  const m = new Map(); const steps = Array.isArray(run && run.steps) ? run.steps : [];
+  steps.forEach(s => { if (s.model) m.set(modelLabel(s.model), s.model);
+    if (s.subq || s.subq_safe_to_retire != null || s.subq_supports_signoff != null) m.set("SubQ", "SubQ");
+    if (s.tx_hash || s.name === "anchor" || s.chain_memo) m.set("Fetch testnet", "Fetch testnet (dorado-1)"); });
+  if (run && run.best_model) m.set(modelLabel(run.best_model), run.best_model);
+  if (run && run.tx_hash) m.set("Fetch testnet", "Fetch testnet (dorado-1)");
+  return m;
+}
+function demoHeader(mod) {
+  const D = DEMOS[mod], w = h("div"); w.style.cssText = "display:flex;flex-direction:column;gap:10px";
+  w.append(h("div", "eyebrow", "Real-world demo · " + D.label), h("h1", null, D.head), h("p", "lead", D.problem));
+  const who = h("p", "who"); who.append(h("b", null, "Who uses this: "), D.who); w.append(who);
+  return w;
+}
+function stopDemoPoll() { if (Demo.poll) { clearTimeout(Demo.poll); Demo.poll = null; } Demo.token++; }
+function openDemo(mod) {
+  stopDemoPoll(); Demo.mod = mod; Demo.runId = null; Demo.rendered = []; const tk = Demo.token;
+  const root = $("#demoMain"), wrap = h("div", "dwrap"); root.replaceChildren(wrap); root.scrollTop = 0;
+  wrap.append(demoHeader(mod));
+  if (!MODE.live) {
+    const c = h("section", "card"); c.append(h("h3", null, "Live demos need the LAZARUS API"),
+      h("p", "sub", "Each demo runs real agents against a real service, so there is nothing honest to show without the API. Start it at " + BASE + " and this page connects by itself within 15 seconds."),
+      h("p", "sub", "Nothing on this tab is simulated, and no sample run is shown in its place."));
+    wrap.append(c); return;
+  }
+  const bar = h("div", "dbar"); bar.id = "dBar";
+  const meta = h("div", "dmeta"); meta.id = "dMeta"; meta.append(h("span", null, "Loading the latest run…"));
+  const btn = h("button", "btn primary", "Run it live"); btn.type = "button"; btn.id = "dRun"; btn.addEventListener("click", () => startRun(mod));
+  bar.append(meta, btn); wrap.append(bar);
+  const chips = h("div", "chips"); chips.id = "dChips"; wrap.append(chips);
+  const tl = h("div", "dtl"); tl.id = "dtl"; wrap.append(tl);
+  const tail = h("div"); tail.id = "dTail"; wrap.append(tail);
+  loadLatest(mod, tk);
+}
+async function latestRuns(mod) { const r = await api("/demos/runs?module=" + mod, {}, 10000); return (Array.isArray(r) ? r : []).sort((a, b) => (+b.started_at || 0) - (+a.started_at || 0)); }
+async function loadLatest(mod, tk) {
+  try {
+    const list = await latestRuns(mod); if (tk !== Demo.token) return;
+    const mine = Demo.active[mod] && list.find(r => r.run_id === Demo.active[mod] && r.status === "running");
+    const pick = mine || list.find(r => r.status === "done") || list.find(r => r.status === "running") || list[0];
+    if (!pick) { $("#dMeta").replaceChildren(h("b", null, "No run yet."), h("span", null, "Press “Run it live” to start the first one. It takes 1–4 minutes.")); return; }
+    await pollRun(pick.run_id, tk);
+  } catch (e) { if (tk === Demo.token) $("#dMeta").replaceChildren(h("b", null, "Could not load runs"), h("span", null, str(e.message))); }
+}
+async function pollRun(id, tk) {
+  let run;
+  try { run = await api("/demos/run/" + encodeURIComponent(id), {}, 15000); }
+  catch (e) { if (tk !== Demo.token) return; $("#dTail").replaceChildren(h("div", "dnote", "Lost contact with the run (" + str(e.message) + "). Retrying…")); Demo.poll = setTimeout(() => pollRun(id, tk), 3000); return; }
+  if (tk !== Demo.token) return;
+  renderRun(run);
+  if (run.status === "running") Demo.poll = setTimeout(() => pollRun(id, tk), 2000);
+}
+function renderRun(run) {
+  if (Demo.runId !== run.run_id) { Demo.runId = run.run_id; Demo.rendered = []; $("#dtl").replaceChildren(); }
+  const steps = Array.isArray(run.steps) ? run.steps : [], running = run.status === "running";
+  // meta bar
+  const meta = $("#dMeta"); meta.replaceChildren();
+  const l1 = h("span"); l1.append(running ? "Running live now: " : run.status === "failed" ? "Latest run failed: " : "Latest finished run: ", h("b", null, str(run.run_id)));
+  const last = steps.length ? steps[steps.length - 1].at : null;
+  const l2 = h("span", null, "Started " + fmtEpoch(run.started_at) + (!running && last ? " · took " + dur(run.started_at, last) : "") + " · " + steps.length + " step" + (steps.length === 1 ? "" : "s"));
+  meta.append(l1, l2);
+  const facts = [];
+  if (run.best_score != null) facts.push("best score " + pct(run.best_score) + (run.best_version != null ? " (v" + run.best_version + ")" : ""));
+  if (run.sealed_sha256) facts.push("sealed " + short(run.sealed_sha256, 8, 6));
+  if (run.evidence_sha256) facts.push("evidence " + short(run.evidence_sha256, 8, 6));
+  if (facts.length) meta.append(h("span", null, facts.join(" · ")));
+  const btn = $("#dRun"); btn.disabled = running; btn.textContent = running ? "Run in progress…" : "Run it live";
+  // chips
+  const cm = runChips(run), ch = $("#dChips"); ch.replaceChildren(h("span", "lab", "What actually ran"));
+  if (!cm.size) ch.append(chip("nothing yet", false)); cm.forEach((title, lab) => ch.append(chip(lab, true, title)));
+  // steps (incremental)
+  const tl = $("#dtl");
+  steps.forEach((st, i) => { const k = JSON.stringify(st), r = Demo.rendered[i];
+    if (r && r.k === k) return;
+    const el = stepCard(st, i); if (!r) { el.classList.add("enter"); tl.append(el); } else r.el.replaceWith(el);
+    Demo.rendered[i] = { k, el }; });
+  // tail
+  const tail = $("#dTail"); tail.replaceChildren();
+  if (running) tail.append(waitingBox("Working on: " + (STEP_TITLES[run.current] || str(run.current || "starting")), "New steps appear here as the agents finish them. This page checks every 2 seconds."));
+  if (run.status === "failed") { const e = h("div", "errbox"); e.append(h("b", null, "The run failed: "), document.createTextNode(str(run.error || "no error message returned"))); tail.append(e); }
+}
+async function startRun(mod) {
+  const btn = $("#dRun"); btn.disabled = true; btn.textContent = "Starting…";
+  try {
+    let body = {};
+    if (mod === "audit") { try { const b = (await latestRuns("banking")).find(r => r.status === "done"); if (b) body = { banking_run_id:b.run_id }; } catch {} }
+    const r = await post("/demos/" + mod, body, 30000);
+    if (!r || !r.run_id) throw new Error("the API did not return a run id");
+    Demo.active[mod] = r.run_id; stopDemoPoll(); const tk = Demo.token;
+    $("#dtl").replaceChildren(); Demo.rendered = []; Demo.runId = null;
+    await pollRun(r.run_id, tk);
+  } catch (e) { btn.disabled = false; btn.textContent = "Run it live"; $("#dTail").replaceChildren((() => { const x = h("div", "errbox"); x.append(h("b", null, "Could not start a run: "), document.createTextNode(str(e.message))); return x; })()); }
+}
+function setView(v) {
+  if (!["studio", "how", "banking", "acquisition", "audit", "subq"].includes(v)) v = "studio";
+  view = v; app.classList.toggle("demo-mode", v !== "how"); app.classList.toggle("studio-mode", v === "studio"); app.classList.toggle("subq-mode", v === "subq");
+  document.querySelectorAll(".navtab").forEach(b => b.setAttribute("aria-current", b.dataset.v === v ? "page" : "false"));
+  const want = v === "studio" ? "" : "#" + v; if (location.hash !== want) history.replaceState(null, "", want || location.pathname);
+  stopWalk();
+  if (v !== "studio") studioStop();
+  if (v !== "subq") subqStop();
+  if (v === "how" || v === "studio" || v === "subq") stopDemoPoll(); else openDemo(v);
+  if (v === "subq") subqOpen();
+  if (v === "studio") studioOpen();
+  const ft = $("#foot"); if (ft) { if (!ft.dataset.def) ft.dataset.def = ft.textContent; ft.textContent = v === "studio" ? "Powered by Meta Muse (Spark + Muse Code) · Fetch.ai (Agentverse, Almanac, dorado testnet) · SubQ · MongoDB Atlas" : ft.dataset.def; }
+}
+document.querySelectorAll(".navtab").forEach(b => b.addEventListener("click", () => setView(b.dataset.v)));
+addEventListener("hashchange", () => { const v = location.hash.slice(1) || "studio"; if (v !== view) setView(v); });
+
+/* ======================= Studio ======================= */
+const S = { pane:"biz", mkT:null, edges:null, sellerCache:{}, avail:null, list:[], sel:null, detail:null, chats:{}, verifying:{}, listT:null, actT:null, busy:false, lastErr:"" };
+const usd = n => isFinite(+n) && n !== null && n !== "" ? (+n).toLocaleString("en-US", { style:"currency", currency:"USD" }) : str(n || "–");
+const inProgress = b => /designing|reviewing|starting/i.test(str(b && b.status));
+const canTalk = b => /^(live|registered)$/i.test(str(b && b.status));
+const STATUS_LABEL = { registered:"On Fetch network", live:"Live", failed:"Failed", stopped:"Stopped", designing:"Designing", reviewing:"Reviewing", starting:"Starting" };
+const siteBuilding = d => !!(d && d.site && /building/i.test(str(d.site.status)));
+const ACCT = "https://explore-dorado.fetch.ai/accounts/";
+const museLabel = u => { u = str(u); if (/spark/i.test(u)) return "Meta Muse Spark"; if (/muse.*code|code/i.test(u)) return "Meta Muse Code"; return u; };
+function acctLink(w) { if (!w) return "–"; const a = sLink(ACCT + encodeURIComponent(w), w); a.className = "mono"; return a; }
+function txLinkS(tx, url) { if (!tx && !url) return "–"; const a = sLink(safeUrl(url) || EXPLORER + encodeURIComponent(tx), tx ? short(tx, 10, 8) : "View on Fetch explorer"); if (!a) return str(tx); a.className = "mono"; if (tx) a.title = tx; return a; }
+const statusPill = s => { s = str(s || "unknown").toLowerCase(); const cls = s === "live" ? "ok" : s === "failed" ? "bad" : /registered|stopped/.test(s) ? "" : "warn"; return h("span", "tag " + cls, (STATUS_LABEL[s] || s).toUpperCase()); };
+const trustText = t => t == null ? null : (+t <= 1 ? pct(t) : str(t)) ;
+function sLink(url, text) { const u = safeUrl(url); if (!u) return null; const a = h("a", null, text); a.href = u; a.target = "_blank"; a.rel = "noopener"; a.addEventListener("click", e => e.stopPropagation()); return a; }
+function studioStop() { clearTimeout(S.listT); clearTimeout(S.actT); clearTimeout(S.mkT); S.listT = S.actT = S.mkT = null; }
+function studioShell() {
+  const root = $("#studioMain"); if (root.dataset.built) return; root.dataset.built = "1";
+  const mkt = h("div", "sact smkt"); mkt.id = "sMkt"; mkt.append(h("span", "lab", "Market"), h("span", "sact-t", "Loading the FET price…"));
+  const act = h("div", "sact"); act.id = "sAct"; act.append(h("span", "lab", "Live activity"), h("span", "sact-t", "–"));
+  const left = h("div", "scol slist"); left.id = "sLeft";
+  const right = h("div", "scol sdetail"); right.id = "sRight";
+  root.append(mkt, act, left, right);
+}
+function studioUnavailable() {
+  const left = $("#sLeft"), right = $("#sRight"); left.replaceChildren(); right.replaceChildren();
+  $("#sAct").hidden = true; $("#sMkt").hidden = true; $("#studioMain").classList.add("sdown");
+  const w = h("div", "dwrap"), c = h("section", "card");
+  w.append(h("div", "eyebrow", "Studio"), h("h1", null, "Start any business by chatting"),
+    h("p", "lead", "Describe a business in one sentence. Meta Muse Spark designs and reviews it, Muse Code builds its website, it goes live as a real Fetch.ai agent, customers chat with it, and LAZARUS checks that the agent tells the truth about its own prices and policies."));
+  c.append(h("h3", null, "Studio needs the LAZARUS API"), h("p", "sub", "The Studio endpoints at " + BASE + " are not answering" + (S.lastErr ? " (" + S.lastErr + ")" : "") + ". Nothing is shown here until they do; there is no sample data on this tab."), h("p", "sub", "This page retries every 10 seconds and switches on by itself."));
+  w.append(c); right.append(w); left.style.display = "none";
+}
+async function studioOpen() {
+  studioShell(); studioStop();
+  await studioLoad(true);
+  pullActivity();
+}
+async function studioLoad(first) {
+  if (view !== "studio") return;
+  let list;
+  try { list = await api("/studio/businesses", {}, 10000); if (!Array.isArray(list)) throw new Error("unexpected response"); }
+  catch (e) {
+    S.lastErr = e.status ? "HTTP " + e.status : str(e.message).slice(0, 80);
+    if (S.avail !== false || first) { S.avail = false; studioUnavailable(); }
+    S.listT = setTimeout(() => studioLoad(false), 10000); return;
+  }
+  const wasOff = S.avail !== true; S.avail = true; $("#sLeft").style.display = ""; $("#sAct").hidden = false; $("#sMkt").hidden = false; $("#studioMain").classList.remove("sdown");
+  S.list = list.slice().sort((a, b) => str(b.created_at).localeCompare(str(a.created_at)));
+  if (wasOff) renderStudioLeft(); else renderStudioList();
+  if (!S.sel && S.list.length) S.sel = S.list[0].business_id;
+  if (S.pane === "market") { if (wasOff) renderMarket(); S.listT = setTimeout(() => studioLoad(false), 15000); return; }
+  const cur = S.list.find(b => b.business_id === S.sel);
+  if (S.sel && (wasOff || !S.detail || S.detail.business_id !== S.sel || (cur && (cur.status !== S.detail.status || inProgress(cur) || cur.trust_score !== ((S.detail.verification || {}).score ?? null) && !S.verifying[S.sel] || siteBuilding(S.detail))))) await loadDetail(S.sel, wasOff || !S.detail || S.detail.business_id !== S.sel);
+  else if (!S.sel) renderEmptyDetail();
+  S.listT = setTimeout(() => studioLoad(false), S.list.some(inProgress) || siteBuilding(S.detail) ? 3000 : 15000);
+}
+function renderStudioLeft() {
+  const left = $("#sLeft"); left.replaceChildren();
+  const f = h("form", "snew"); f.id = "sForm";
+  const lab = h("label", "dsec", "Describe a business"); lab.htmlFor = "sPrompt";
+  const ta = h("textarea"); ta.id = "sPrompt"; ta.rows = 3; ta.placeholder = "Describe a business… e.g. a dog-walking service in Austin with 30 and 60 minute walks";
+  ta.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); f.requestSubmit(); } });
+  const row = h("div", "srow");
+  const go = h("button", "btn primary", "Create"); go.type = "submit"; go.id = "sCreate";
+  const seed = h("button", "btn", "Launch 10 industries"); seed.type = "button"; seed.id = "sSeed";
+  const seedD = h("button", "btn", "Launch 20 digital businesses"); seedD.type = "button"; seedD.id = "sSeedD";
+  seedD.addEventListener("click", async () => { seedD.disabled = true; seedD.textContent = "Launching…"; msg.textContent = "";
+    try { const r = await post("/studio/seed_digital", {}, 60000); msg.textContent = "Launching " + (((r && r.business_ids) || []).length || 20) + " digital-product businesses."; studioStop(); await studioLoad(false); }
+    catch (err) { msg.textContent = "Could not launch: " + str(err.message); }
+    finally { seedD.disabled = false; seedD.textContent = "Launch 20 digital businesses"; } });
+  row.append(go, seed, seedD); const msg = h("div", "dnote"); msg.id = "sFormMsg";
+  f.append(lab, ta, row, msg);
+  f.addEventListener("submit", async e => { e.preventDefault(); const p = ta.value.trim(); if (!p) { ta.focus(); return; }
+    go.disabled = true; go.textContent = "Creating…"; msg.textContent = "";
+    try { const r = await post("/studio/businesses", { prompt:p }, 30000); ta.value = ""; if (r && r.business_id) { S.sel = r.business_id; S.detail = null; } msg.textContent = "Meta Muse Spark is designing it. It appears below and goes live in about a minute."; studioStop(); await studioLoad(false); }
+    catch (err) { msg.textContent = "Could not create it: " + str(err.message); }
+    finally { go.disabled = false; go.textContent = "Create"; } });
+  seed.addEventListener("click", async () => { seed.disabled = true; seed.textContent = "Launching…"; msg.textContent = "";
+    try { const r = await post("/studio/seed", {}, 60000); msg.textContent = "Launching " + ((r && r.business_ids) || []).length + " businesses. Watch them go live below."; studioStop(); await studioLoad(false); }
+    catch (err) { msg.textContent = "Could not launch: " + str(err.message); }
+    finally { seed.disabled = false; seed.textContent = "Launch 10 industries"; } });
+  const seg = h("div", "seg"); seg.setAttribute("role", "tablist");
+  [["biz", "Your businesses"], ["market", "Market"]].forEach(([k, l]) => { const b = h("button", null, l); b.type = "button"; b.dataset.pane = k; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", S.pane === k); b.addEventListener("click", () => setPane(k)); seg.append(b); });
+  left.append(seg);
+  const head = h("div", "slhead"); head.append(h("h2", null, "Your businesses"), h("span", "dnote", "")); head.lastChild.id = "sCount";
+  const ul = h("div", "scards"); ul.id = "sCards";
+  left.append(f, head, ul); renderStudioList();
+}
+function renderStudioList() {
+  const ul = $("#sCards"); if (!ul) return; ul.replaceChildren();
+  $("#sCount").textContent = S.list.length + " total · " + S.list.filter(b => b.status === "live").length + " live";
+  if (!S.list.length) ul.append(h("div", "dnote", "No businesses yet. Describe one above, or launch 10 industries to see it in action."));
+  S.list.forEach(b => {
+    const c = h("div", "scard" + (b.business_id === S.sel ? " sel" : "")); c.tabIndex = 0; c.setAttribute("role", "button"); c.setAttribute("aria-pressed", b.business_id === S.sel);
+    const top = h("div", "sct"); top.append(h("b", null, b.name || (inProgress(b) ? "Designing…" : "Untitled")), statusPill(b.status)); c.append(top);
+    const meta = h("div", "scm"); if (b.industry) meta.append(chip(str(b.industry))); if (b.digital) meta.append(h("span", "tag acc", "DIGITAL"));
+    const t = trustText(b.trust_score); if (t != null) meta.append(h("span", "tag " + (+b.trust_score >= (b.trust_score <= 1 ? .9 : 9) ? "ok" : "warn"), "Trust " + t));
+    if (b.catalog_count != null) meta.append(h("span", "dnote", b.catalog_count + " items"));
+    c.append(meta);
+    if (b.status === "live") { const l = sLink(b.profile_url, "Agentverse profile ↗"); if (l) { l.className = "slink"; c.append(l); } }
+    else if (b.status === "registered") c.append(h("span", "dnote", "Own agent address + wallet on the Fetch Almanac"));
+    const pick = () => { if (S.pane !== "biz") { S.sel = b.business_id; setPane("biz"); return; } if (S.sel === b.business_id) return; S.sel = b.business_id; renderStudioList(); loadDetail(b.business_id, true); if (innerWidth <= 860) $("#sRight").scrollIntoView({ behavior:RM ? "auto" : "smooth" }); };
+    c.addEventListener("click", pick); c.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    ul.append(c);
+  });
+}
+function renderEmptyDetail() { const r = $("#sRight"); r.replaceChildren(); const w = h("div", "dwrap"); w.append(h("div", "eyebrow", "Studio"), h("h1", null, "Start any business by chatting"), h("p", "lead", "Describe a business on the left. Meta Muse Spark designs its catalog and policies, Muse Code builds its website, it goes live as a real Fetch.ai agent, and LAZARUS verifies it tells customers the truth.")); r.append(w); }
+async function loadDetail(id, full) {
+  let d; try { d = await api("/studio/businesses/" + encodeURIComponent(id), {}, 10000); } catch (e) { if (S.sel === id) { const r = $("#sRight"); r.replaceChildren(h("div", "errbox", "Could not load this business: " + str(e.message))); } return; }
+  if (S.sel !== id) return;
+  const same = S.detail && S.detail.business_id === id, prevStatus = same ? S.detail.status : null;
+  if (same && !d.verification && S.detail.verification) d.verification = S.detail.verification;
+  S.detail = d;
+  if (full || prevStatus !== d.status || inProgress(d)) renderDetail(d); else { renderVerify(d.verification); renderExtras(d); }
+}
+function renderDetail(d) {
+  const r = $("#sRight"), keepScroll = r.scrollTop; r.replaceChildren(); const w = h("div", "dwrap");
+  w.append(h("div", "eyebrow", "Studio · " + str(d.industry || "business")), h("h1", null, d.name || "Designing…"));
+  if (d.pitch) w.append(h("p", "lead", d.pitch));
+  const bar = h("div", "chips"); bar.append(statusPill(d.status)); if (d.digital) bar.append(h("span", "tag acc", "DIGITAL")); if (d.handle) bar.append(monoEl("@" + str(d.handle).replace(/^@/, "")));
+  const l = d.status === "live" ? sLink(d.profile_url, "Open on Agentverse ↗") : null; if (d.status === "registered" && d.address) { const al = sLink("https://agentverse.ai/agents/details/" + encodeURIComponent(d.address) + "/profile", "Look up on Agentverse ↗"); if (al) bar.append(al); } if (l) { l.style.fontWeight = "600"; bar.append(l); }
+  w.append(bar);
+  if (inProgress(d)) w.append(waitingBox(/design/i.test(d.status) ? "Meta Muse Spark is designing the business" : /review/i.test(d.status) ? "Fetch.ai and Meta Muse Spark are reviewing it before launch" : "Starting the Fetch.ai agent", "This page checks every 3 seconds. The catalog, policies and chat appear as soon as they exist."));
+  if (d.status === "registered" && d.error) w.append(h("p", "dnote", str(d.error)));
+  else if (d.status === "failed" || d.error) { const e = h("div", "errbox"); e.append(h("b", null, "This business failed: "), document.createTextNode(str(d.error || "no error message returned"))); w.append(e); }
+  const spec = d.spec || {};
+  const cat = Array.isArray(spec.catalog) ? spec.catalog : [];
+  if (cat.length) { const c = card("Catalog", cat.length + " items, as the agent will quote them", null, true); const sw = h("div", "scroll-x"), t = h("table", "vtable"), hr = h("tr"); ["Item", "Price", "Unit"].forEach(x => hr.append(h("th", null, x))); t.append(hr);
+    cat.forEach(it => { const tr = h("tr"); tr.append(h("td", null, str(it.name)), h("td", null, usd(it.price)), h("td", null, str(it.unit || "–"))); t.append(tr); }); sw.append(t); c.append(sw); w.append(c); }
+  const pol = Array.isArray(spec.policies) ? spec.policies.map((p, i) => p && typeof p === "object" ? [str(p.key ?? p.name ?? p.title ?? "Policy " + (i + 1)), p.value ?? p.text ?? p.detail ?? p] : ["Policy " + (i + 1), p])
+    : spec.policies && typeof spec.policies === "object" ? Object.entries(spec.policies) : [];
+  if (pol.length) { const c = card("Policies", "Hours, location, refunds and other rules the agent must stick to", null, true); c.append(kv(pol.map(([k, v]) => [k.replace(/_/g, " ").replace(/^./, m => m.toUpperCase()), show(v)]))); w.append(c); }
+  // chat
+  // slots: review, website, wallet, payments
+  ["sReview", "sSite", "sWallet"].forEach(id => { const x = h("div"); x.id = id; x.style.cssText = "display:flex;flex-direction:column;gap:16px"; w.append(x); });
+  const talk = canTalk(d);
+  if (talk || cat.length) {
+    const c = card("Talk to it like a customer", talk ? "Messages go to the agent. Try “order 1 …”: orders are paid from the customer agent's wallet on the Fetch testnet." : "Chat opens once the agent is on the Fetch network.", null, true);
+    const ex = Array.isArray(spec.examples) ? spec.examples : [];
+    if (ex.length) { const pr = h("div", "presets"); ex.slice(0, 6).forEach(q => { const b = h("button", "chipbtn", str(q)); b.type = "button"; b.style.fontFamily = "var(--sans)"; b.disabled = !talk; b.addEventListener("click", () => studioChat(d.business_id, str(q))); pr.append(b); }); c.append(pr); }
+    const log = h("div", "slog"); log.id = "sLog"; c.append(log);
+    const f = h("form", "composer"); f.style.padding = "12px 0 0"; const inp = h("input"); inp.type = "text"; inp.id = "sChatIn"; inp.placeholder = "Ask a question as a customer…"; inp.setAttribute("aria-label", "Customer message"); inp.disabled = !talk;
+    const sb = h("button", "btn primary", "Send"); sb.type = "submit"; sb.id = "sChatSend"; sb.disabled = !talk;
+    f.append(inp, sb); f.addEventListener("submit", e => { e.preventDefault(); const v = inp.value.trim(); if (v) { inp.value = ""; studioChat(d.business_id, v); } });
+    c.append(f); w.append(c);
+    (S.chats[d.business_id] || []).forEach(m => log.append(chatNode(m)));
+  }
+  if (talk) w.append(buyCard(d));
+  const pay = h("div"); pay.id = "sOrders"; w.append(pay);
+  // verify
+  if (talk || d.verification) {
+    const c = h("section", "card verify"); c.append(h("h3", null, "Verify before customers see it"));
+    const row = h("div", "vrow"); row.append(h("p", "sub", "LAZARUS asks the live agent questions whose answers are fixed by its own catalog and policies, then checks every answer. Exact facts are checked in code; SubQ gives a second opinion on free-text answers."));
+    const b = h("button", "btn primary", S.verifying[d.business_id] ? "Verifying…" : "Verify before customers see it"); b.type = "button"; b.id = "sVerify"; b.disabled = !!S.verifying[d.business_id] || !talk;
+    b.addEventListener("click", () => studioVerify(d.business_id)); row.append(b); c.append(row);
+    const slot = h("div"); slot.id = "sVerSlot"; c.append(slot); w.append(c);
+  }
+  r.append(w); r.scrollTop = keepScroll; renderVerify(d.verification); renderExtras(d);
+}
+function renderExtras(d) {
+  // review
+  const rv = $("#sReview"); if (rv) { rv.replaceChildren(); const R = d.review;
+    if (R) { const iss = Array.isArray(R.issues) ? R.issues : [];
+      const c = card("Pre-launch check by Muse Spark", R.ready ? "Ready to launch. " + (iss.length ? iss.length + " suggestion(s) below." : "No issues found.") : "Not ready to launch until the issues below are fixed.", h("span", "tag " + (R.ready ? "ok" : "bad"), R.ready ? "READY" : "NOT READY"), true);
+      if (iss.length) { const sw = h("div", "scroll-x"), t = h("table", "vtable"), hr = h("tr"); ["Severity", "Field", "Problem", "Fix"].forEach(x => hr.append(h("th", null, x))); t.append(hr);
+        iss.forEach(x => { const tr = h("tr"), sv = str(x.severity).toLowerCase(), td = h("td"); td.append(h("span", "tag " + (/high|critical|block/.test(sv) ? "bad" : /med/.test(sv) ? "warn" : ""), sv.toUpperCase() || "–"));
+          const fd = h("td"); fd.append(monoEl(show(x.field))); tr.append(td, fd, h("td", null, show(x.problem)), h("td", null, show(x.fix))); t.append(tr); });
+        sw.append(t); c.append(sw); }
+      rv.append(c); }
+    else if (/review/i.test(d.status)) rv.append(waitingBox("Muse Spark is checking it before launch", "Looking for missing prices, vague policies and promises the catalog can't keep.")); }
+  // website
+  const st = $("#sSite"); if (st) { st.replaceChildren(); const W = d.site;
+    if (W) { const c = card("Website by Muse Code", "A one-page site generated from the same catalog and policies the agent uses.", h("span", "tag " + (/ready/i.test(W.status) ? "ok" : /fail/i.test(W.status) ? "bad" : "warn"), str(W.status || "–").toUpperCase()), true);
+      if (/building/i.test(W.status)) c.append(waitingBox("Muse Code is building the website…", "This card updates by itself when it is ready."));
+      else if (/fail/i.test(W.status)) c.append(h("div", "errbox", "The website build failed" + (W.error ? ": " + str(W.error) : ".")));
+      else { const row = h("div", "vrow"); const info = h("div", "sub"); info.style.margin = "0";
+        info.append((W.bytes != null ? (+W.bytes).toLocaleString() + " bytes" : "") + (W.check ? (W.bytes != null ? " · " : "") + "check: " + str(W.check) : ""));
+        row.append(info); const u = d.site_url ? safeUrl(/^https?:/i.test(d.site_url) ? d.site_url : BASE + (str(d.site_url).startsWith("/") ? "" : "/") + d.site_url) : null;
+        if (u) { const a = h("a", "btn primary", "Open website ↗"); a.href = u; a.target = "_blank"; a.rel = "noopener"; a.style.textDecoration = "none"; row.append(a); } c.append(row);
+        const pm = Array.isArray(W.prices_missing) ? W.prices_missing : []; if (pm.length) { const ch = h("div", "chips"); ch.append(h("span", "lab", "Prices missing on the site:")); pm.forEach(x => ch.append(h("span", "tag warn", show(x)))); c.append(ch); } }
+      st.append(c); } }
+  // wallet
+  const wl = $("#sWallet"); if (wl) { wl.replaceChildren();
+    if (d.wallet || d.address) { const c = card("Agent wallet", "This agent's own identity and wallet on the Fetch testnet (dorado-1). Customers and other agents pay it directly.", null, true);
+      c.append(kv([["Agent address", d.address ? monoEl(d.address) : "–"], ["Wallet", acctLink(d.wallet)], ["Balance", d.wallet_balance_testfet != null ? (+d.wallet_balance_testfet).toFixed(4) + " testFET" : "–"], ["Funding tx", d.funded_tx ? txLinkS(d.funded_tx) : "–"]]));
+      wl.append(c); } }
+  // payments
+  const po = $("#sOrders"); if (po) { po.replaceChildren(); const os = (Array.isArray(d.orders) ? d.orders : []).slice().sort((a, b) => (+b.at || 0) - (+a.at || 0));
+    if (os.length) { const sc = S.market && +S.market.testnet_scale; const c = card("Payments", os.length + " order(s), each a real transaction on the Fetch testnet" + (sc ? " at 1/" + sc.toLocaleString() + " scale" : ""), null, true);
+      const sw = h("div", "scroll-x"), t = h("table", "vtable"), hr = h("tr"); ["Ref", "Item", "USD", "testFET", "Buyer", "Status", "Transaction"].forEach(x => hr.append(h("th", null, x))); t.append(hr);
+      os.forEach(o => { const tr = h("tr"); tr.append(h("td", null, show(o.ref)), h("td", null, show(o.qty) + " × " + show(o.item)), h("td", null, usd(o.usd)), h("td", null, o.testnet_fet != null ? (+o.testnet_fet).toFixed(6) : "–"), h("td", null, show(o.buyer)));
+        const ts = h("td"); ts.append(h("span", "tag " + (/paid|confirm/i.test(o.status) ? "ok" : /fail/i.test(o.status) ? "bad" : "warn"), str(o.status || "–").toUpperCase())); const tx = h("td"); tx.append(txLinkS(o.tx_hash, o.explorer)); tr.append(ts, tx); t.append(tr); });
+      sw.append(t); c.append(sw); po.append(c); } }
+}
+function buyCard(d) {
+  const c = card("Buy from another business", "This agent pays another Studio agent from its own wallet: agent wallet → agent wallet, on chain.", null, true);
+  const others = S.list.filter(b => b.business_id !== d.business_id && canTalk(b));
+  if (!others.length) { c.append(h("p", "dnote", "No other business is on the network yet.")); return c; }
+  const f = h("form", "sbuy"), sel = h("select"); sel.id = "sBuySeller"; sel.setAttribute("aria-label", "Seller");
+  others.forEach(b => { const o = h("option", null, b.name + (b.industry ? " · " + b.industry : "")); o.value = b.business_id; sel.append(o); });
+  const msg = h("input"); msg.type = "text"; msg.id = "sBuyMsg"; msg.setAttribute("aria-label", "Order message");
+  const go = h("button", "btn primary", "Buy"); go.type = "submit"; go.id = "sBuyGo";
+  const out = h("div", "slog"); out.id = "sBuyOut";
+  const prefill = async () => { const id = sel.value; msg.value = "order 1 …"; try { const sd = S.sellerCache[id] || (S.sellerCache[id] = await api("/studio/businesses/" + encodeURIComponent(id), {}, 10000)); const it = sd.spec && sd.spec.catalog && sd.spec.catalog[0]; if (sel.value === id) msg.value = "order 1 " + (it ? str(it.name).toLowerCase() : ""); } catch { if (sel.value === id) msg.value = "order 1 "; } };
+  sel.addEventListener("change", prefill); prefill();
+  f.append(sel, msg, go);
+  f.addEventListener("submit", async e => { e.preventDefault(); const m = msg.value.trim(); if (!m || go.disabled) return;
+    go.disabled = true; go.replaceChildren(h("span", "spin"), document.createTextNode("Paying…"));
+    const um = { role:"user", who:d.name, text:"To " + sel.options[sel.selectedIndex].text.split(" · ")[0] + ": " + m, at:Date.now() }; out.append(chatNode(um));
+    let am; try { const r = await post("/studio/businesses/" + encodeURIComponent(d.business_id) + "/buy", { seller_id:sel.value, message:m }, 120000); am = { role:"agent", who:"Seller agent", text:str(r.reply), card:r.card || null, payment:r.payment, used:r.used, at:Date.now() }; }
+    catch (err) { am = { role:"agent", text:"The purchase did not go through: " + str(err.message), error:true, at:Date.now() }; }
+    const n = chatNode(am); out.append(n); n.scrollIntoView({ block:"nearest" }); go.disabled = false; go.textContent = "Buy"; loadDetail(d.business_id, false); });
+  c.append(f, out); return c;
+}
+function renderVerify(v) {
+  const slot = $("#sVerSlot"); if (!slot) return; slot.replaceChildren();
+  if (S.verifying[S.sel]) { slot.append(waitingBox("Asking the agent its test questions", "This takes 10–30 seconds. Meta Muse Spark answers; LAZARUS checks.")); return; }
+  if (!v) return;
+  const rows = Array.isArray(v.rows) ? v.rows : [], passed = v.passed ?? rows.filter(x => x.pass).length, total = v.total ?? rows.length;
+  const allOk = total > 0 && passed === total;
+  const res = h("div", "result " + (allOk ? "ok" : "bad")), hd = h("div", "rhead");
+  hd.append(h("span", "tag " + (allOk ? "ok" : "bad"), allOk ? "VERIFIED" : "ISSUES"), h("b", null, passed + " of " + total + " answers matched the agent's own catalog and policies"), h("span", "when", v.at ? "Checked " + (typeof v.at === "number" || /^\d+(\.\d+)?$/.test(str(v.at)) ? fmtEpoch(v.at) : new Date(v.at).toTimeString().slice(0, 8)) : ""));
+  res.append(hd);
+  const bar = h("div", "bar lg" + (allOk ? "" : " bad")), f = h("i"); f.style.width = (total ? passed / total * 100 : 0) + "%"; bar.append(f); res.append(bar);
+  const sw = h("div", "scroll-x"); sw.style.marginTop = "14px"; const t = h("table", "vtable"), hr = h("tr"); ["Question", "Expected", "Agent said", "Result", "SubQ"].forEach(x => hr.append(h("th", null, x))); t.append(hr);
+  rows.forEach(x => { const tr = h("tr"); tr.append(h("td", null, show(x.question)), h("td", null, show(x.expected)), h("td", null, show(x.got)));
+    const td = h("td"); td.append(h("span", "tag " + (x.pass ? "ok" : "bad"), x.pass ? "PASS" : "FAIL")); tr.append(td);
+    tr.append(h("td", null, x.subq == null ? (x.check ? str(x.check) + " check" : "–") : Math.round(+x.subq * 100) + "%")); t.append(tr); });
+  sw.append(t); res.append(sw); res.append(rawDetails(v)); slot.append(res);
+}
+async function studioVerify(id) {
+  if (S.verifying[id]) return; S.verifying[id] = true;
+  const b = $("#sVerify"); if (b) { b.disabled = true; b.replaceChildren(h("span", "spin"), document.createTextNode("Verifying…")); } renderVerify(null);
+  let v, err;
+  try { v = await post("/studio/businesses/" + encodeURIComponent(id) + "/verify", {}, 120000); } catch (e) { err = e; }
+  S.verifying[id] = false;
+  if (S.sel !== id) return;
+  if (v) { if (S.detail) S.detail.verification = v; renderVerify(v); }
+  else { const slot = $("#sVerSlot"); if (slot) slot.replaceChildren(errorBox(err)); }
+  const bb = $("#sVerify"); if (bb) { bb.disabled = false; bb.textContent = "Verify before customers see it"; }
+  studioStop(); studioLoad(false);
+}
+function cardNode(cd) {
+  const rowsObj = cd.rows && typeof cd.rows === "object" ? cd.rows : {}, stat = str(rowsObj.Status ?? rowsObj.status ?? "");
+  const paid = /^PAID/i.test(stat) && !!safeUrl(cd.explorer);
+  const c = h("div", "a-card " + (paid ? "tone-green" : "tone-blue")), col = h("div", "a-col"); c.append(col);
+  if (paid) { const bn = h("div", "paid"); bn.append(h("b", null, "PAID"), h("span", null, stat)); col.append(bn); }
+  if (cd.delivery && cd.delivery.preview) col.append(previewBox(cd.delivery));
+  const top = h("div", "a-row split"); top.append(h("div", "a-text v-h4", str(cd.title || "")), h("span", "tag acc", str(cd.kind || "info").toUpperCase())); col.append(top);
+  const rows = cd.rows && typeof cd.rows === "object" ? Object.entries(cd.rows) : [];
+  if (rows.length) col.append(kv(rows.map(([k, v]) => [k, /^download$/i.test(k) ? (dlLink(v, cd.delivery && cd.delivery.ref) || show(v)) : /sha-?256/i.test(k) ? monoEl(show(v)) : typeof v === "number" && /price|total|cost|amount|fee|deposit|subtotal|tax/i.test(k) ? usd(v) : show(v)])));
+  const items = Array.isArray(cd.items) ? cd.items : [];
+  if (items.length) { const t = h("table", "vtable"); items.forEach(it => { const tr = h("tr"); tr.append(h("td", null, str(it.name)), h("td", null, usd(it.price)), h("td", null, str(it.unit || ""))); t.append(tr); }); col.append(t); }
+  const ags = Array.isArray(cd.agents) ? cd.agents : [];
+  if (ags.length) { const l = h("div", "list"); ags.forEach(a => { const li = h("div", "li"); li.append(h("div", "t", str(a.name)), sLink(a.profile_url, "Open on Agentverse ↗") || h("span"));
+    const m = h("div", "m"); if (a.description) m.append(str(a.description) + " "); if (a.address) m.append(monoEl(short(a.address, 12, 6))); li.append(m); l.append(li); }); col.append(l); }
+  const ex = safeUrl(cd.explorer); if (ex) { const a = sLink(ex, "View on Fetch explorer ↗"); a.style.fontWeight = "600"; col.append(a); }
+  return c;
+}
+function chatNode(m) {
+  const el = h("article", "msg " + (m.role === "user" ? "user" : "")), mh = h("div", "mh");
+  mh.append(h("span", "who", m.who || (m.role === "user" ? "Customer" : "Agent"))); if (m.error) mh.append(h("span", "tag bad", "error")); mh.append(h("span", "t", hhmmss(m.at)));
+  el.append(mh); if (m.text) el.append(h("div", "body", m.text));
+  if (m.card) el.append(cardNode(m.card));
+  const p = m.payment; if (p && typeof p === "object" && (p.tx_hash || p.explorer) && !(m.card && safeUrl(m.card.explorer))) { const pl = h("div", "dnote"); pl.append("Payment " + str(p.status || "") + " "); pl.append(txLinkS(p.tx_hash, p.explorer)); el.append(pl); }
+  if (Array.isArray(m.used) && m.used.length) { const rc = h("div", "receipts"); rc.append(h("span", "lab", "Answered by")); m.used.forEach(u => rc.append(chip(museLabel(u), true, str(u)))); rc.append(chip("Fetch.ai", true, "Fetch.ai agent, Agentverse and dorado testnet")); el.append(rc); }
+  return el;
+}
+async function studioChat(id, text) {
+  if (S.busy) return; S.busy = true;
+  const arr = S.chats[id] || (S.chats[id] = []); const log = $("#sLog"), sb = $("#sChatSend");
+  const um = { role:"user", text, at:Date.now() }; arr.push(um); if (log) log.append(chatNode(um));
+  const th = h("div", "thinking", "The agent is answering"); if (log) { log.append(th); th.scrollIntoView({ block:"nearest" }); } if (sb) sb.disabled = true;
+  let am;
+  try { const r = await post("/studio/businesses/" + encodeURIComponent(id) + "/chat", { message:text }, 90000); am = { role:"agent", text:str(r.reply), card:r.card || null, payment:r.payment, used:r.used, at:Date.now() }; }
+  catch (e) { am = { role:"agent", text:"The agent did not answer: " + str(e.message), error:true, at:Date.now() }; }
+  arr.push(am); th.remove(); S.busy = false; if (sb) sb.disabled = false;
+  if (S.sel === id && $("#sLog")) { const n = chatNode(am); $("#sLog").append(n); n.scrollIntoView({ block:"nearest" }); }
+  if (am.card || am.payment) loadDetail(id, false);
+}
+function absApi(v) { v = str(v); if (/^https?:/i.test(v)) return safeUrl(v); if (v.startsWith("/")) return safeUrl(BASE + v); return null; }
+function dlLink(v, ref) { const u = absApi(v) || (ref ? safeUrl(BASE + "/studio/d/" + encodeURIComponent(ref)) : null); if (!u) return null; const a = h("a", null, "Download (.md) ↓"); a.href = u; a.target = "_blank"; a.rel = "noopener"; a.style.fontWeight = "600"; return a; }
+const openPrev = new Set();
+function previewBox(dv) { const d = h("details", "raw"), key = str(dv.ref || dv.sha256 || dv.title); d.open = openPrev.has(key); d.addEventListener("toggle", () => { if (d.open) openPrev.add(key); else openPrev.delete(key); }); d.append(h("summary", null, "Preview the delivered file" + (dv.bytes ? " (" + (+dv.bytes).toLocaleString() + " bytes)" : "")), h("pre", "code", str(dv.preview))); return d; }
+function setPane(k) {
+  S.pane = k; document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-selected", b.dataset.pane === k));
+  clearTimeout(S.mkT); S.mkT = null;
+  if (k === "market") renderMarket(); else { renderStudioList(); if (S.sel) loadDetail(S.sel, true); else renderEmptyDetail(); }
+}
+function renderMarket() {
+  const r = $("#sRight"); r.replaceChildren(); r.scrollTop = 0; const w = h("div", "dwrap");
+  w.append(h("div", "eyebrow", "Studio · Market"), h("h1", null, "Agents buying from agents"), h("p", "lead", "Every business here is its own Fetch.ai agent with its own wallet. Meta Muse Spark maps who would buy what from whom; each trade is paid wallet-to-wallet on the Fetch testnet and the digital product is delivered as a file with a SHA-256 fingerprint."));
+  const ctl = h("section", "card"); ctl.append(h("h3", null, "Market rounds"));
+  const row = h("div", "vrow"); const st = h("p", "sub"); st.id = "mkStatus"; st.textContent = "Checking market status…";
+  const run = h("button", "btn primary", "Run market round"); run.type = "button"; run.id = "mkRun";
+  run.addEventListener("click", async () => { run.disabled = true; run.replaceChildren(h("span", "spin"), document.createTextNode("Starting…"));
+    try { await post("/studio/market/run", { rounds:1, per_round:3 }, 30000); } catch (e) { st.textContent = "Could not start a round: " + str(e.message); }
+    pollMarket(); });
+  row.append(st, run); ctl.append(row); w.append(ctl);
+  const tr = card("Live trades", "Newest first. Each one is a real payment on the Fetch testnet plus a delivered file.", null, true); const tl = h("div", "list"); tl.id = "mkTrades"; tl.append(h("div", "dnote", "Loading trades…")); tr.append(tl); w.append(tr);
+  const ed = card("Who buys from whom (mapped by Muse Spark)", "Each row is a plausible purchase between two businesses on the network.", null, true); const es = h("div", "scroll-x"); es.id = "mkEdges"; es.append(h("div", "dnote", "Loading the map…")); ed.append(es); w.append(ed);
+  r.append(w); pollMarket(); loadEdges();
+}
+async function loadEdges() {
+  const box = $("#mkEdges"); if (!box) return;
+  try { const e = S.edges || (S.edges = await api("/studio/market/edges", {}, 15000)); const l = Array.isArray(e) ? e : [];
+    const t = h("table", "vtable"), hr = h("tr"); ["Buyer → Seller", "Item", "Why"].forEach(x => hr.append(h("th", null, x))); t.append(hr);
+    l.forEach(x => { const tr = h("tr"), td = h("td"); td.append(h("b", null, str(x.buyer_name || x.buyer)), " → ", h("b", null, str(x.seller_name || x.seller))); td.style.minWidth = "220px"; tr.append(td, h("td", null, str(x.item)), h("td", null, str(x.why))); t.append(tr); });
+    box.replaceChildren(l.length ? t : h("div", "dnote", "No market map yet. Launch the digital businesses first."));
+  } catch (err) { S.edges = null; box.replaceChildren(h("div", "errbox", "Could not load the market map: " + str(err.message))); }
+}
+function tradeNode(x) {
+  const li = h("div", "li"), d = x.delivery || {}, t = h("div", "t"); t.append(h("b", null, str(x.buyer)), " bought ", h("b", null, str(x.item)), " from ", h("b", null, str(x.seller)));
+  const tags = h("div", "chips"); tags.style.justifyContent = "flex-end"; tags.append(h("span", "tag " + (/paid/i.test(x.status) ? "ok" : "bad"), str(x.status || "–").toUpperCase()));
+  li.append(t, tags);
+  const m = h("div", "m"); m.append((x.why ? str(x.why) + " · " : "") + fmtEpoch(x.at) + " · "); const tx = sLink(safeUrl(x.explorer) || (x.tx_hash ? EXPLORER + encodeURIComponent(x.tx_hash) : null), "View on Fetch explorer ↗"); m.append(tx || "no transaction"); li.append(m);
+  if (d.title || d.preview) { const dv = h("div", "m"); dv.style.cssText = "display:flex;flex-direction:column;gap:6px;color:var(--text)";
+    const top = h("div"); top.append(h("span", "tag ok", "DELIVERED"), " ", h("b", null, str(d.title || d.file || "file")), " ");
+    const dl = dlLink(null, d.ref || x.ref); if (dl) top.append(" · ", dl); dv.append(top);
+    if (d.sha256) { const sh = h("div", "dnote"); sh.style.margin = "0"; sh.append("SHA-256 ", monoEl(short(d.sha256, 16, 8))); dv.append(sh); }
+    if (d.preview) dv.append(previewBox(d)); li.append(dv); }
+  return li;
+}
+async function pollMarket() {
+  clearTimeout(S.mkT); S.mkT = null; if (view !== "studio" || S.pane !== "market") return;
+  let on = false;
+  try { const stt = await api("/studio/market/status", {}, 8000); on = !!(stt && stt.on); const st = $("#mkStatus"), run = $("#mkRun");
+    if (st) st.textContent = on ? "A market round is running" + (stt.rounds != null ? " (" + stt.rounds + " round(s) completed)" : "") + ". New trades appear below every few seconds." : "Idle. Run a round: 3 agents each buy something from another business, paid on chain.";
+    if (run) { run.disabled = on; if (on) run.replaceChildren(h("span", "spin"), document.createTextNode("Round running…")); else run.textContent = "Run market round"; } } catch (e) { const st = $("#mkStatus"); if (st) st.textContent = "Could not read market status: " + str(e.message); }
+  try { const tr = await api("/studio/trades", {}, 10000), box = $("#mkTrades"); if (box && Array.isArray(tr)) { const l = tr.slice().sort((a, b) => (+b.at || 0) - (+a.at || 0)); box.replaceChildren(); if (!l.length) box.append(h("div", "dnote", "No trades yet.")); l.slice(0, 30).forEach(x => box.append(tradeNode(x))); } } catch {}
+  if (S.pane === "market" && view === "studio") S.mkT = setTimeout(pollMarket, on ? 3000 : 15000);
+}
+/* ======================= SubQ console ======================= */
+const SQ = { t:null };
+const SQ_SITES = { subq_studio:"Studio truth check", subq_divergence:"Is this a real behaviour difference?", subq_retire:"Safe to retire the original?", subq_signoff:"Audit sign-off" };
+function subqStop() { clearTimeout(SQ.t); SQ.t = null; }
+function subqOpen() { subqStop(); subqLoad(); }
+const cap = x => str(x).replace(/^./, m => m.toUpperCase());
+async function subqLoad() {
+  if (view !== "subq") return;
+  const root = $("#subqMain"), w = h("div", "dwrap");
+  w.append(h("div", "eyebrow", "SubQ · second opinions"), h("h1", null, "Every SubQ call LAZARUS made"));
+  let d;
+  try { d = await api("/subq/console?limit=25", {}, 10000); }
+  catch (e) { const c = h("section", "card"); c.append(h("h3", null, "The SubQ console needs the LAZARUS API"), h("p", "sub", "GET " + BASE + "/subq/console did not answer (" + str(e.message) + "). Nothing is shown in its place. Retrying every 10 seconds."));
+    w.append(c); root.replaceChildren(w); SQ.t = setTimeout(subqLoad, 10000); return; }
+  const model = str(d.model_in_use), keysC = Array.isArray(d.keys_configured) ? d.keys_configured : [], mode = str(d.key_mode);
+  w.append(h("p", "lead", (/snap/i.test(model) ? "SubQ Snap" : "SubQ") + " (" + model + ") · " + keysC.length + " API key" + (keysC.length === 1 ? "" : "s") + (mode === "alternate" ? ", alternating, each falls back to the other" : mode ? ", " + mode : "")));
+  const mc = h("div", "chips"); mc.append(h("span", "lab", "Models available"));
+  (Array.isArray(d.models_available) ? d.models_available : []).forEach(m => mc.append(chip(str(m), str(m) === model, str(m) === model ? "in use" : "")));
+  w.append(mc);
+  // key cards
+  const g = h("div", "sbs"); (Array.isArray(d.keys) ? d.keys : []).forEach(k => {
+    const c = h("section", "card"), hd = h("h3", null, cap(k.key) + " key"); hd.append(h("span", "tag " + (+k.errors || +k.refused ? "warn" : "ok"), +k.errors ? k.errors + " ERRORS" : "HEALTHY")); c.append(hd);
+    const succ = +k.calls ? Math.round(+k.ok / +k.calls * 100) + "% (" + k.ok + "/" + k.calls + ")" : "–";
+    c.append(kv([["Calls", show(k.calls)], ["Success", succ], ["Refused", show(k.refused)], ["Failovers", show(k.failovers)], ["Tokens in", (+k.input_tokens || 0).toLocaleString()], ["Avg latency", k.avg_seconds != null ? (+k.avg_seconds).toFixed(2) + " s" : "–"], ["Last used", k.last_at ? fmtEpoch(k.last_at) + " · " + ago(+k.last_at * 1000) : "never"]]));
+    g.append(c); });
+  w.append(g);
+  // call sites
+  const sites = Object.entries(d.by_call_site || {}).sort((a, b) => b[1] - a[1]);
+  const sc = card("Where SubQ is used", "Each LAZARUS step that asks SubQ for a yes/no second opinion.", null, true);
+  const st = h("table", "vtable"), sh = h("tr"); ["What it decides", "Call site", "Calls"].forEach(x => sh.append(h("th", null, x))); st.append(sh);
+  sites.forEach(([k, n]) => { const tr = h("tr"), td = h("td"); td.append(monoEl(k)); tr.append(h("td", null, SQ_SITES[k] || k), td, h("td", null, show(n))); st.append(tr); });
+  if (!sites.length) sc.append(h("p", "dnote", "No calls yet.")); else { const sw = h("div", "scroll-x"); sw.append(st); sc.append(sw); }
+  w.append(sc);
+  // recent
+  const rc = card("Recent calls", "Newest first.", null, true);
+  const rt = h("table", "vtable"), rh = h("tr"); ["Time", "Key", "Where", "Question", "Yes", "Tokens", "Latency", "Status"].forEach(x => rh.append(h("th", null, x))); rt.append(rh);
+  (Array.isArray(d.recent) ? d.recent : []).slice().sort((a, b) => (+b.at || 0) - (+a.at || 0)).forEach(x => {
+    const tr = h("tr"), kt = h("td"); kt.append(chip(cap(x.key), true)); if (x.failover) kt.append(" ", h("span", "tag warn", "FAILOVER"));
+    const yp = h("td"); yp.style.minWidth = "110px"; if (x.yes_probability != null) { const n = Math.max(0, Math.min(1, +x.yes_probability)); yp.append(h("div", null, Math.round(n * 1000) / 10 + "%")); const bar = h("div", "bar"), f = h("i"); bar.style.marginTop = "4px"; f.style.width = n * 100 + "%"; bar.append(f); yp.append(bar); } else yp.textContent = "–";
+    const ok = +x.status >= 200 && +x.status < 300, stt = h("td"); stt.append(h("span", "tag " + (ok ? "ok" : "bad"), ok ? "OK" : show(x.status)));
+    tr.append(h("td", null, fmtEpoch(x.at)), kt, h("td", null, SQ_SITES[x.call] || str(x.call)), h("td", null, show(x.question)), yp, h("td", null, (+x.input_tokens || 0) + " in / " + (+x.output_tokens || 0) + " out"), h("td", null, x.seconds != null ? (+x.seconds).toFixed(2) + " s" : "–"), stt);
+    rt.append(tr); });
+  const rw = h("div", "scroll-x"); rw.append(rt); rc.append(rw);
+  rc.append(h("p", "dnote", "SubQ has no usage API; this is built from every call LAZARUS made and logged. Their dashboard shows the same calls per key."));
+  w.append(rc);
+  const keep = root.scrollTop; root.replaceChildren(w); root.scrollTop = keep;
+  SQ.t = setTimeout(subqLoad, 10000);
+}
+let mktN = 0;
+async function pullMarket() {
+  try { const m = await api("/studio/market", {}, 8000), t = $("#sMkt .sact-t"); S.market = m; if (!t || !m) return; t.replaceChildren();
+    const sc = +m.testnet_scale; const i1 = h("span", "sact-i"); i1.append(h("b", null, "FET " + (m.fet_usd != null ? "$" + (+m.fet_usd).toFixed(4) : "–")), " live (" + str(m.source || "price feed") + ")");
+    const i2 = h("span", "sact-i"); i2.append("Customer agent wallet "); const wl = sLink(ACCT + encodeURIComponent(str(m.customer_wallet)), (m.customer_balance_testfet != null ? (+m.customer_balance_testfet).toFixed(2) : "–") + " testFET"); i2.append(wl || "–");
+    const i3 = h("span", "sact-i", sc ? "settles at 1/" + sc.toLocaleString() + " scale on Fetch testnet" : "settles on Fetch testnet");
+    t.append(i1, i2, i3); } catch {}
+}
+async function pullActivity() {
+  if (view !== "studio") return;
+  if (mktN++ % 6 === 0) pullMarket();
+  try { const a = await api("/studio/activity", {}, 8000); const t = $("#sAct .sact-t"); if (Array.isArray(a) && t) { t.replaceChildren(); a.slice(0, 3).forEach((x, i) => { const s = h("span", "sact-i"); s.append(h("b", null, str(x.business || "Studio")), " " + str(x.text) + " · " + ago(typeof x.at === "number" ? x.at * 1000 : x.at)); t.append(s); }); if (!a.length) t.textContent = "No activity yet."; } } catch {}
+  S.actT = setTimeout(pullActivity, 5000);
+}
+
+/* ---------- boot + polling ---------- */
+function setMode(live) { const was = MODE.live; MODE.live = live; if (was !== live && typeof view !== "undefined" && view !== "how") setTimeout(() => { if (view !== "studio" && view !== "subq") openDemo(view); }, 0); const p = $("#mode"); p.className = "pill " + (live ? "live" : "off"); p.lastElementChild.textContent = live ? "LIVE" : "OFFLINE SAMPLE"; p.title = live ? "Connected to " + BASE : "API at " + BASE + " not reachable; showing labelled sample data"; }
+async function detect() { try { const s = await api("/snapshot", {}, 4000); if (s && typeof s === "object" && (s.seal || Array.isArray(s.claims))) return s; } catch {} return null; }
+function afterData() { renderStepper(); if (dataKey() !== renderedKey) renderData(); }
+let snapFails = 0;
+async function refresh() { try { State.snap = await B.snapshot(); snapFails = 0; afterData(); } catch (e) { if (MODE.live && !e.timeout && ++snapFails >= 2) { snapFails = 0; setMode(false); State.snap = Sample.snapshot(); State.trust = Sample.trust(); renderPanel(false); renderStepper(); } } }
+async function pullTrust() { try { State.trust = await B.trust(); afterData(); } catch {} }
+async function pullEvents() {
+  if (!MODE.live) { $("#activity").hidden = true; return; }
+  try { const ev = await B.events(); const e = Array.isArray(ev) && ev[0]; if (e) { $("#activity").hidden = false; $("#actText").textContent = "Latest: " + str(e.text) + " · " + ago(e.at); } } catch {}
+}
+async function boot() {
+  const snap = await detect(); setMode(!!snap);
+  State.snap = snap || Sample.snapshot();
+  try { State.trust = await B.trust(); } catch { State.trust = null; }
+  renderStepper(); renderPanel(true); welcome(); pullEvents(); setView(location.hash.slice(1) || "studio");
+  setInterval(pullEvents, 8000); setInterval(pullTrust, 15000);
+  setInterval(async () => {
+    if (MODE.live) return refresh();
+    const s = await detect(); if (s) { setMode(true); State.snap = s; pullTrust(); renderStepper(); renderPanel(false); addMsg("assistant", "The live API is back. Steps now show live data."); }
+  }, 15000);
+}
+window.__proof = { go, sendChat, State, MODE, Demo, setView, S };
+boot();
+})();
+</script>
+</body>
+</html>
