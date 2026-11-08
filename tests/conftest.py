@@ -1,9 +1,12 @@
-import json, sys, threading, pathlib
+import json, os, sys, threading, pathlib
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import pyrage, pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+# Tests import the agents. With the real key loaded from .env they would queue an
+# Agentverse registration; an empty value wins because load_dotenv never overrides.
+os.environ["AGENTVERSE_API_KEY"] = ""
 
 
 class Fake(BaseHTTPRequestHandler):

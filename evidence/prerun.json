@@ -1,0 +1,206 @@
+{
+  "steps": [
+    {
+      "at": "13:46:46",
+      "step": "resumed",
+      "claims": 16,
+      "probes_so_far": 16
+    },
+    {
+      "at": "13:48:04",
+      "step": "probing",
+      "probes": 2
+    },
+    {
+      "at": "13:52:05",
+      "step": "probing",
+      "probes": 4
+    },
+    {
+      "at": "13:53:14",
+      "step": "probing",
+      "probes": 6
+    },
+    {
+      "at": "13:54:32",
+      "step": "probing",
+      "probes": 8
+    },
+    {
+      "at": "13:59:23",
+      "step": "probing",
+      "probes": 10
+    },
+    {
+      "at": "14:00:51",
+      "step": "probing",
+      "probes": 12
+    },
+    {
+      "at": "14:02:36",
+      "step": "probing",
+      "probes": 14
+    },
+    {
+      "at": "14:05:09",
+      "step": "probing",
+      "probes": 16
+    },
+    {
+      "at": "14:08:02",
+      "step": "probing",
+      "probes": 18
+    },
+    {
+      "at": "14:16:48",
+      "step": "probing",
+      "probes": 20
+    },
+    {
+      "at": "14:17:49",
+      "step": "probing",
+      "probes": 21
+    },
+    {
+      "at": "14:18:42",
+      "step": "probing",
+      "probes": 22
+    },
+    {
+      "at": "14:20:07",
+      "step": "probing",
+      "probes": 23
+    },
+    {
+      "at": "14:21:32",
+      "step": "probing",
+      "probes": 24
+    },
+    {
+      "at": "14:21:33",
+      "step": "dug",
+      "endpoints": [
+        "/healthz",
+        "/invoice",
+        "/rate",
+        "/sku"
+      ],
+      "OBSERVED": 2,
+      "INFERRED": 12,
+      "REFUTED": 2,
+      "resolved_pct": 25,
+      "probes": 24
+    },
+    {
+      "at": "14:28:47",
+      "step": "port_written",
+      "version": 1,
+      "by": "muse-code"
+    },
+    {
+      "at": "14:28:47",
+      "step": "sentinel_passed",
+      "version": 1
+    },
+    {
+      "at": "14:28:50",
+      "step": "gate",
+      "version": 1,
+      "label": "first port",
+      "equivalence": 0.505,
+      "regressions": [],
+      "reason": "eligible: strict improvement, zero regressions"
+    },
+    {
+      "at": "14:29:06",
+      "step": "decision",
+      "version": 1,
+      "status": "ADOPTED"
+    },
+    {
+      "at": "14:29:28",
+      "step": "scout",
+      "tried": 30,
+      "found": 29,
+      "examples": [
+        "path: trailing slash GET /healthz/",
+        "path: trailing slash GET /sku/AX-200/",
+        "path: trailing slash GET /sku/JB-1000/",
+        "path: trailing slash GET /sku/REFUTE-0001/",
+        "path: trailing slash POST /invoice/"
+      ]
+    },
+    {
+      "at": "14:31:32",
+      "step": "port_patched",
+      "version": 2,
+      "from_divergence": "D-0001",
+      "by": "muse-code"
+    },
+    {
+      "at": "14:31:32",
+      "step": "sentinel_passed",
+      "version": 2
+    },
+    {
+      "at": "14:31:38",
+      "step": "gate",
+      "version": 2,
+      "label": "patched from a found difference",
+      "equivalence": 0.51,
+      "regressions": [],
+      "reason": "eligible: strict improvement, zero regressions"
+    },
+    {
+      "at": "14:31:56",
+      "step": "decision",
+      "version": 2,
+      "status": "ADOPTED"
+    },
+    {
+      "at": "14:32:28",
+      "step": "seeded_bad_patch",
+      "version": 3,
+      "note": "generic sabotage written by Muse Code on request"
+    },
+    {
+      "at": "14:32:28",
+      "step": "sentinel_passed",
+      "version": 3
+    },
+    {
+      "at": "14:32:35",
+      "step": "gate",
+      "version": 3,
+      "label": "seeded bad patch",
+      "equivalence": 0.445,
+      "regressions": [
+        "HO-123",
+        "HO-124",
+        "HO-141",
+        "HO-142",
+        "HO-143",
+        "HO-144",
+        "HO-145",
+        "HO-148",
+        "HO-149",
+        "HO-153",
+        "HO-194",
+        "HO-195",
+        "HO-196"
+      ],
+      "reason": "blocked: 13 regressions"
+    },
+    {
+      "at": "14:32:35",
+      "step": "decision",
+      "version": 3,
+      "status": "ROLLED_BACK"
+    },
+    {
+      "at": "14:32:37",
+      "step": "report",
+      "sha256": "f5e48bf18fdf753864087217b030c8bc4558a1061faa985056c40f3c6348c395"
+    }
+  ]
+}

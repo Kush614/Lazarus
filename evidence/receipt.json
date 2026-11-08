@@ -1,0 +1,49 @@
+{
+  "kind": "lazarus-proof-receipt",
+  "format": 1,
+  "issued_at": "2026-11-07T22:33:04Z",
+  "seal": {
+    "tx": "7A3C8BE99C0A78365C4F6A13EC769EFFA7FE5844535C1D1A274F794742E6A9D8",
+    "network": "fetchai-stable-testnet (dorado-1)",
+    "source_hash": "148eaaad7fdf3cdffa67275362b3b630e1b17daee6aa637b271c750b5abf98f9",
+    "heldout_hash": "35d544ddda162806b5d42c45b63b8d68d074de93a94ac624e062d005c13ca511",
+    "sealed_at": "2026-11-07T06:22:49.645308+00:00",
+    "explorer": "https://explore-dorado.fetch.ai/transactions/7A3C8BE99C0A78365C4F6A13EC769EFFA7FE5844535C1D1A274F794742E6A9D8"
+  },
+  "claims": {
+    "observed": 2,
+    "inferred": 12,
+    "refuted": 2
+  },
+  "probes": 40,
+  "versions": [
+    {
+      "version": 1,
+      "equivalence": 0.505,
+      "status": "ADOPTED",
+      "regressions": 0,
+      "parent": null,
+      "commit": "content:2be70d3dcfe2f103"
+    },
+    {
+      "version": 2,
+      "equivalence": 0.51,
+      "status": "ADOPTED",
+      "regressions": 0,
+      "parent": 1,
+      "commit": "content:7c81da8c20350039"
+    },
+    {
+      "version": 3,
+      "equivalence": 0.445,
+      "status": "ROLLED_BACK",
+      "regressions": 13,
+      "parent": 2,
+      "commit": "content:05237e7a260fc788"
+    }
+  ],
+  "divergences": 29,
+  "verified_bounties": 0,
+  "report_sha256": "f5e48bf18fdf753864087217b030c8bc4558a1061faa985056c40f3c6348c395",
+  "id": "f556ed457bd5cd361db9a3f5130b7fcfb16be1b3668b99dc6db0f18eb75c98bb"
+}

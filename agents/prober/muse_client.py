@@ -41,7 +41,8 @@ def run_exec(call: str, prompt: str, seed_dir: pathlib.Path | None = None, runne
         shutil.copytree(seed_dir, ws, dirs_exist_ok=True, ignore=shutil.ignore_patterns("__pycache__"))
     prompt_file = ws.parent / (ws.name + ".prompt")
     prompt_file.write_text(prompt)
-    argv = ["muse", "exec", "--json", "--workspace", str(ws), "--prompt-file", str(prompt_file)]
+    # --no-foreign-personal-context: otherwise Muse loads the operator's own skills from ~/.claude.
+    argv = ["muse", "exec", "--json", "--no-foreign-personal-context", "--workspace", str(ws), "--prompt-file", str(prompt_file)]
     env = {k: os.environ[k] for k in ("PATH", "HOME", "META_API_KEY") if k in os.environ}  # never the seeds or age keys
     run = runner or (lambda: subprocess.run(argv, cwd=ws, env=env, capture_output=True, text=True, timeout=TIMEOUT_S))
     last = None

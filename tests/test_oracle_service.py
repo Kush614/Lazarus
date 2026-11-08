@@ -64,3 +64,27 @@ def test_same_input_cannot_be_paid_twice_per_version():
     assert not o.already_claimed(REQ)
     o.hunt("h", REQ, "tx", "w", T(B), lambda x: "b", verify=OK)
     assert o.already_claimed(REQ)
+
+
+def test_compare_records_a_difference_without_money(db_and_oracle=None):
+    import mongomock
+    from agents.oracle.service import Oracle
+    from core.schemas import Request, Response
+
+    class T:
+        def __init__(self, body):
+            self.body = body
+
+        def send(self, req):
+            return Response(status=200, headers={"content-type": "application/json"}, body=self.body)
+
+    d = mongomock.MongoClient().x
+    d.divergences.create_index([("input_hash", 1), ("port_version", 1)], unique=True, sparse=True)
+    d.port_versions.insert_one({"version": 3, "status": "ADOPTED", "heldout_equivalence": .5})
+    o = Oracle(d, None, T({"a": 1}), None)
+    req = Request(method="GET", path="/x")
+    assert o.compare(req, T({"a": 1}), "lazarus-scout") == {"diverged": False, "divergence_id": None}
+    first = o.compare(req, T({"a": 2}), "lazarus-scout")
+    assert first["diverged"] and d.divergences.count_documents({}) == 1 and d.payments.count_documents({}) == 0 and d.hunts.count_documents({}) == 0
+    assert o.compare(req, T({"a": 2}), "lazarus-scout") == first and d.divergences.count_documents({}) == 1
+    assert o.already_claimed(req), "a scout find cannot then be claimed for a bounty"

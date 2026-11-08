@@ -43,9 +43,11 @@ def stake(db, tx_hash: str, recipient_wallet: str, hunter: str, verify=None) -> 
     return tx_hash
 
 
-def bounty(db, wallet, to_address: str, hunter: str, divergence_id: str, client=None) -> str | None:
-    """Stake + bounty back to the hunter. Returns a hash only after on-chain success."""
-    atto = int((Decimal(STAKE_FET) + Decimal(BOUNTY_FET)) * 10**18)
+def bounty(db, wallet, to_address: str, hunter: str, divergence_id: str, client=None, bounty_fet: str = BOUNTY_FET) -> str | None:
+    """Stake + bounty back to the hunter. Returns a hash only after on-chain success.
+    `bounty_fet` is the trust-price offer that stood when the hunt began (core/trust_price.py)."""
+    total = Decimal(STAKE_FET) + Decimal(bounty_fet)
+    atto = int(total * 10**18)
     try:
         c = client or _client()
         tx = c.send_tokens(to_address, atto, _DENOM, wallet)
@@ -55,5 +57,5 @@ def bounty(db, wallet, to_address: str, hunter: str, divergence_id: str, client=
         h = tx.tx_hash
     except Exception:
         return None
-    _record(db, tx_hash=h, kind="bounty", hunter=hunter, divergence_id=divergence_id, amount_fet="6")
+    _record(db, tx_hash=h, kind="bounty", hunter=hunter, divergence_id=divergence_id, amount_fet=f"{total:f}".rstrip("0").rstrip("."), to=to_address)
     return h

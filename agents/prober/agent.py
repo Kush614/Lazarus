@@ -12,6 +12,7 @@ from fetch_hackkit import HackAgent
 
 from agents.prober.muse_client import MuseError, read_json_output, run_exec
 from core.schemas import Probe, Request
+from core.trust import is_command, is_peer
 
 ROOT = pathlib.Path(__file__).parent.parent.parent
 HERE = pathlib.Path(__file__).parent
@@ -87,14 +88,23 @@ def apply_strategy_diff(cmd):
         return {"strategy": f.read_text()}
 
 
-HANDLERS = {"design_probes": design_probes, "write_port": write_port, "patch_port": patch_port,
+def restore_port(cmd):
+    """Drops a port the sentinel blocked, back to the last committed one."""
+    subprocess.run(["git", "restore", "--staged", "--worktree", "--", "port"], cwd=ROOT, check=True, capture_output=True)
+    subprocess.run(["git", "clean", "-fdq", "--", "port"], cwd=ROOT, check=True, capture_output=True)
+    return {"ok": True}
+
+
+HANDLERS = {"restore_port": restore_port, "design_probes": design_probes, "write_port": write_port, "patch_port": patch_port,
             "concretize": concretize, "apply_strategy_diff": apply_strategy_diff}
 
 
 @agent.on_text
 async def on_text(ctx, msg):
-    if not msg.text.strip().startswith('{"cmd"'):
-        return "I work for @lazarus-digger. Say `Exhume <image>` to it."
+    if not is_command(msg.text):
+        return "I work for @lazarus-digger. Say `Exhume` to it."
+    if not is_peer(msg.sender):
+        return "Internal commands are only accepted from LAZARUS agents."
     cmd = json.loads(msg.text)
     try:
         return json.dumps(await asyncio.to_thread(HANDLERS[cmd["cmd"]], cmd))

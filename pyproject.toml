@@ -5,6 +5,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "fastapi>=0.162.0",
     "fetch-hackkit>=0.2.0",
+    "google-genai>=2.3.0",
     "httpx>=0.28.1",
     "mongomock>=4.3.0",
     "pydantic>=2.14.3",
@@ -12,5 +13,6 @@ dependencies = [
     "pyrage>=1.4.0",
     "pytest>=9.2.0",
     "python-dotenv>=1.2.4",
+    "python-multipart>=0.0.33",
     "uvicorn>=0.54.0",
 ]

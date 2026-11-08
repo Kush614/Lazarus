@@ -5,3 +5,9 @@ __pycache__/
 .pytest_cache/
 logs/meta/*.tmp
 relic/relic
+logs/agents/
+builds/
+logs/
+relic/logs/
+builds/
+.claude/

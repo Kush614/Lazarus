@@ -17,10 +17,11 @@ def hunt_form():
     ], submit=cards.cta("Prepare hunt", "prepare_hunt", primary=True))
 
 
-def stake_review(req: Request):
+def stake_review(req: Request, offer_fet: str = "5"):
     return cards.review("Confirm your hunt", rows={
         "Method": req.method, "Path": req.path, "Headers": _short(req.headers), "Body": _short(req.body),
-        "Stake": "1 testnet FET (returned + 5 FET if the ghost diverges, forfeited if it holds)",
+        "Stake": f"1 testnet FET (returned + {offer_fet} FET if the port diverges, forfeited if it holds)",
+        "Bounty offer": f"{offer_fet} FET now: it grows each hour nobody breaks the port",
     }, approve=cards.cta("Stake 1 FET and hunt", "hunt", primary=True, request=req.model_dump()),
        reject=cards.cta("Cancel", "cancel_hunt"))
 
@@ -41,6 +42,31 @@ def hunt_card(r: HuntResult):
         "Stake tx": r.tx_stake,
         "Bounty tx": r.tx_bounty or "none",
     }, ctas=[cards.cta("Hunt again", "hunt_form")])
+
+
+def challenge_form():
+    return cards.form("Challenge the port: free, no stake", [
+        cards.field("description", "Describe an input that might trip it up", "textarea", placeholder="Plain English"),
+        cards.field("raw", "Or raw JSON: {method, path, headers, body}", "textarea"),
+    ], submit=cards.cta("Run it on both", "challenge_run", primary=True))
+
+
+def challenge_card(r: dict):
+    """Free try. It may report a difference, never a payment."""
+    o, p = r["original"], r["port"]
+    if not r["diverged"]:
+        title, note = "Challenge: the port held", "Both programs gave the same answer. That is evidence, not proof."
+    elif r["new"]:
+        title, note = f"Challenge: you found a difference ({r['divergence_id']})", (
+            "Credited to you, unpaid: this was a free try. It goes into the improvement loop. "
+            "Stake on a new input with Hunt to earn a bounty.")
+    else:
+        title, note = f"Challenge: already known ({r['divergence_id']})", "Someone found this one first, so it cannot be claimed again."
+    return cards.detail(title, rows={
+        "Port version": r["version"], "Input": _short(r["input"]),
+        "Original": f"{o['status']} {_short(o['body'])}", "Port": f"{p['status']} {_short(p['body'])}",
+        "Payment": "none (free challenge)",
+    }, ctas=[cards.cta("Try another", "challenge_form"), cards.cta("Hunt for a bounty", "hunt_form")], narration=note)
 
 
 def gate_rows(v: PortVersion) -> dict:

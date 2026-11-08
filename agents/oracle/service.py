@@ -56,6 +56,40 @@ class Oracle:
         self.db.port_versions.update_one({"_id": doc["_id"]}, {"$set": {"status": v.status, "decided_by": decided_by}})
         return v
 
+    def compare(self, req: Request, port_target, found_by: str) -> dict:
+        """The hunt's comparison with no stake and no bounty, for LAZARUS's own scout.
+        A difference is recorded, so it cannot later be claimed as a paid find on this version."""
+        r = self.challenge(req, port_target, found_by)
+        return {"diverged": r["diverged"], "divergence_id": r["divergence_id"]}
+
+    def challenge(self, req: Request, port_target, who: str) -> dict:
+        """Free 'try to break it': runs both programs and returns the evidence. A difference is
+        recorded and credited to `who`, unpaid, so the same input cannot be staked on afterwards
+        (otherwise a free try followed by a stake would be a guaranteed bounty)."""
+        adopted = ledger.latest_adopted(self.db)
+        version = adopted["version"] if adopted else 0
+        original, port = self.original.send(req), port_target.send(req)
+        if original is None:
+            self.db.failures.insert_one({"kind": "compare_original_timeout", "request": req.model_dump()})
+            raise ValueError("the original did not answer")
+        port = port or FAILED
+        out = {"version": version, "input": req.model_dump(), "original": original.model_dump(), "port": port.model_dump()}
+        self.db.challenges.insert_one({"version": version, "who": who, "input_hash": input_hash(req), "diverged": not canon_equal(original, port)})
+        if canon_equal(original, port):
+            return {**out, "diverged": False, "divergence_id": None, "new": False, "diff": ""}
+        h = input_hash(req)
+        known = self.db.divergences.find_one({"input_hash": h, "port_version": version})
+        if known:
+            return {**out, "diverged": True, "divergence_id": known["id"], "new": False, "diff": known["diff"], "found_by": known["found_by"]}
+        d = Divergence(id=ledger.next_id(self.db, "D"), input=req, original=original, port=port,
+                       diff=unified(original, port), found_by=who, port_version=version)
+        try:
+            self.db.divergences.insert_one({**d.model_dump(), "input_hash": h})
+        except DuplicateKeyError:
+            known = self.db.divergences.find_one({"input_hash": h, "port_version": version})
+            return {**out, "diverged": True, "divergence_id": known["id"], "new": False, "diff": known["diff"], "found_by": known["found_by"]}
+        return {**out, "diverged": True, "divergence_id": d.id, "new": True, "diff": d.diff, "found_by": who}
+
     def already_claimed(self, req: Request) -> bool:
         """Checked before asking for a stake: the same input cannot be paid twice per version."""
         adopted = ledger.latest_adopted(self.db)
